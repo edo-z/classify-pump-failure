@@ -80,6 +80,21 @@ Pompa tersangkut sampah langsung diputuskan bila frekuensi ≤ 10 Hz dan minimal
 
 Murni per-sampel, selalu full-resolution: tiap sampel dinilai dengan evidensi trailingnya (gap >10 dtk memutus histori); tiap pembacaan suhu ≥ 60 °C langsung menjadi titik gangguan; titik gangguan = points dengan `is_failure: true` (tidak ada array `failures` terpisah); daerah gangguan di grafik hanya mengelompokkan yang bukan `normal`.
 
+## v1 Klasifikasi Single-Shot (kontrak stabil tim BE)
+
+`POST /v1/classify` — stateless, tanpa CSV. Wajib header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set (401 bila salah). Lihat `18-integrasi.md` untuk panduan lengkap + contoh curl/Python/fetch.
+
+```json
+// request
+{ "profile_id":"5000_lps", "setpoint_freq":40.0, "namespace":"96",
+  "readings":[{ "timestamp":"2026-06-12T14:33:56+07:00", "output_frequency":40.0, "input_voltage":380.0 }] }
+// response
+{ "profile_id":"5000_lps", "namespace":"96", "rules_version":"1.0",
+  "evidence_size":12, "classification":{...ClassificationResult...} }
+```
+
+Batas: 1–40 readings; timestamp wajib ber-zona waktu (422 bila naive); profil tak dikenal 404.
+
 ## Acuan Pompa
 
 ### Lihat & ubah — `GET /profile-setpoints`, `PUT /profile-setpoints/{id}` `{frequency_hz,rpm,torque}` (torsi dalam %)

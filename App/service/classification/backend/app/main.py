@@ -16,6 +16,8 @@ from app.api.normalization import (
     router as normalization_router,
 )
 from app.api.profile_setpoints import router as profile_setpoints_router
+from app.api.v1 import router as v1_router
+from app.api_key import ApiKeyMiddleware
 from app.classification.engine import (
     RULES_FILE,
 )
@@ -23,6 +25,8 @@ from app.classification.engine import (
 app = FastAPI(
     title="Pump Trouble Classification Service",
 )
+
+app.add_middleware(ApiKeyMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,6 +48,11 @@ app.include_router(
 
 app.include_router(
     profile_setpoints_router
+)
+
+# v1 — kontrak stabil tim BE (single-shot, stateless).
+app.include_router(
+    v1_router
 )
 
 
