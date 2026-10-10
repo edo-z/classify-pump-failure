@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   buildChatStreamUrl,
   validateChatMessage,
@@ -58,6 +60,10 @@ export default function ChatPage() {
   const threadRef = useRef<HTMLDivElement | null>(null);
   const stallTimerRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  // 5R Interaksi: salin jawaban + smart scroll (hanya saat di bawah).
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const nearBottomRef = useRef(true);
+  const copyTimerRef = useRef<number | null>(null);
 
   function clearStallTimer() {
     if (stallTimerRef.current !== null) {
@@ -79,6 +85,9 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
+    // 5R Rapi: ID sesi dibuat setelah mount (aman hidrasi — tak masuk HTML
+    // SSR) agar label "Sesi …" langsung terisi tanpa menunggu kirim pertama.
+    getSessionId();
     setMounted(true);
   }, []);
 
@@ -93,8 +102,20 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
+    const el = threadRef.current;
+    // Smart scroll: ikuti stream hanya bila pengguna sudah di dekat bawah,
+    // agar riwayat yang sedang dibaca tidak dirampas tiap delta.
+    if (el && nearBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   }, [turns, conn]);
+
+  function trackScroll() {
+    const el = threadRef.current;
+    if (!el) return;
+    nearBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+  }
 
   useEffect(() => {
     return () => {
@@ -105,6 +126,10 @@ export default function ChatPage() {
       }
       sourceRef.current = null;
       clearStallTimer();
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -208,6 +233,26 @@ export default function ChatPage() {
     if (lastUser) send(lastUser.text);
   }
 
+  async function copyText(text: string, idx: number) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopiedIdx(idx);
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopiedIdx(null), 2000);
+    } catch {
+      // clipboard tak tersedia — diam, tanpa error konsol
+    }
+  }
+
   function autoGrow() {
     const el = inputRef.current;
     if (!el) return;
@@ -216,6 +261,9 @@ export default function ChatPage() {
   }
 
   const busy = conn === "connecting" || conn === "live";
+  // 5R Komposisi: sebelum pesan pertama composer di tengah (hero),
+  // setelahnya composer menempel di bawah (docking).
+  const started = turns.length > 0 || busy;
   const lastTurn = turns[turns.length - 1];
   const streamingActive =
     busy && lastTurn?.role === "assistant" && !lastTurn.text.trim();
@@ -255,10 +303,120 @@ export default function ChatPage() {
     }
     const total = meta.usage?.total_tokens;
     if (typeof total === "number" && Number.isFinite(total)) {
-      parts.push(`${Math.round(total).toLocaleString("id-ID")} token (token turn final)`);
+      parts.push(`${Math.round(total).toLocaleString("id-ID")} token (token turn terakhir)`);
     }
     return parts.length ? parts.join(" • ") : null;
   }
+
+  // 5R Komposisi: blok render dipakai ulang di cabang hero (tengah)
+  // dan cabang thread (docking) — satu definisi, tanpa duplikasi JSX.
+  const heroBlock = (
+    <div className={styles.hero}>
+      <div className={styles.heroTitle}>Halo, saya Dexmin.</div>
+      <p className={styles.heroText}>
+        Mentor teknisi pompa — tanya soal gangguan, ambang, dan tindak lanjut di lapangan.
+      </p>
+      <ul className={styles.heroList}>
+        <li>Jelaskan 9 jenis gangguan + ambangnya (360/410 V, 60 °C, unbalance 10%).</li>
+        <li>Bedakan pola mirip: turbulensi vs banyak sampah, dry run vs normal.</li>
+        <li>Sarankan langkah aman berikutnya sebelum Anda eksekusi.</li>
+      </ul>
+    </div>
+  );
+
+  const chipsBlock = (
+    <div className={styles.chips}>
+      {SUGGESTIONS.map((s) => (
+        <button
+          key={s}
+          type="button"
+          className={styles.chip}
+          disabled={busy}
+          onClick={() => send(s)}
+        >
+          {s}
+        </button>
+      ))}
+    </div>
+  );
+
+  const contextBlock = (
+    <details className={styles.context}>
+      <summary>Konteks pompa (opsional)</summary>
+      <div className={styles.contextBody}>
+        <label className={styles.field}>
+          Site ID (nomor pompa)
+          <input
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+            placeholder="cth 96"
+            style={{ width: 140 }}
+          />
+        </label>
+        <label className={styles.field}>
+          Document ID
+          <input
+            value={documentId}
+            onChange={(e) => setDocumentId(e.target.value)}
+            placeholder="kosong = umum"
+            style={{ width: 200 }}
+          />
+        </label>
+      </div>
+    </details>
+  );
+
+  const errorBlock = connError ? (
+    <div className={styles.error} role="alert">
+      <span>{connError}</span>
+      <button type="button" className={styles.retry} onClick={retryLast}>
+        Coba lagi
+      </button>
+    </div>
+  ) : null;
+
+  const composerForm = (
+    <form
+      className={styles.composer}
+      onSubmit={(e) => {
+        e.preventDefault();
+        send();
+      }}
+    >
+      <div className={styles.composerRow}>
+        <textarea
+          ref={inputRef}
+          rows={1}
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            autoGrow();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          placeholder="Tulis pesan (maks 4000 huruf)…"
+          maxLength={4000}
+          disabled={busy}
+          className={styles.input}
+          aria-label="Pesan chat"
+        />
+        {!busy ? (
+          <button type="submit" className={styles.send} disabled={input.length === 0}>
+            Kirim
+          </button>
+        ) : (
+          <button type="button" className={styles.stop} onClick={stopStream}>
+            Stop
+          </button>
+        )}
+      </div>
+        <div className={styles.hint}>Enter kirim • Shift+Enter baris baru • {input.length}/4000 • token turn terakhir</div>
+    </form>
+  );
 
   return (
     <div className={styles.shell}>
@@ -266,61 +424,36 @@ export default function ChatPage() {
         <span className={`${styles.avatar} ${styles.avatarBot}`} aria-hidden="true">D</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className={styles.title}>Dexmin</div>
-          <div className={styles.status}>
-            <span className={dotClass} aria-hidden="true" />
-            <span>{statusText}</span>
-          </div>
         </div>
-        <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
+        <span style={{ fontSize: "0.72rem", color: "#6b7280" }}>
           Sesi <code>{mounted ? `${sessionRef.current.slice(0, 8)}…` : "…"}</code>
         </span>
       </header>
 
-      <details className={styles.context}>
-        <summary>Konteks pompa (opsional)</summary>
-        <div className={styles.contextBody}>
-          <label className={styles.field}>
-            Site ID (nomor pompa)
-            <input
-              value={siteId}
-              onChange={(e) => setSiteId(e.target.value)}
-              placeholder="cth 96"
-              style={{ width: 140 }}
-            />
-          </label>
-          <label className={styles.field}>
-            Document ID
-            <input
-              value={documentId}
-              onChange={(e) => setDocumentId(e.target.value)}
-              placeholder="kosong = umum"
-              style={{ width: 200 }}
-            />
-          </label>
+      {(siteId.trim() || documentId.trim()) && (
+        <div className={styles.contextPills} aria-label="Konteks aktif">
+          {siteId.trim() && <span className={styles.pill}>Site {siteId.trim()}</span>}
+          {documentId.trim() && <span className={styles.pill}>Dok {documentId.trim()}</span>}
         </div>
-      </details>
+      )}
 
-      <div ref={threadRef} className={styles.thread} aria-live="polite">
-        {turns.length === 0 && !busy && (
-          <>
-            <p className={styles.empty}>
-              Halo, saya Dexmin — mentor teknisi pompa. Silakan mulai percakapan.
-            </p>
-            <div className={styles.chips}>
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={styles.chip}
-                  disabled={busy}
-                  onClick={() => send(s)}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+      {!started ? (
+        <div className={`${styles.center} ${styles.centerFade}`}>
+          {/* 5R Stabilitas: pembungkus margin-auto agar judul tak terpotong
+              saat konten melebihi viewport (jebakan justify-center + overflow). */}
+          <div className={styles.centerInner}>
+            {heroBlock}
+            {composerForm}
+            {chipsBlock}
+            {contextBlock}
+            {errorBlock}
+          </div>
+        </div>
+      ) : (
+        <>
+          {contextBlock}
+
+      <div ref={threadRef} className={styles.thread} aria-live="polite" onScroll={trackScroll}>
         {streamingActive && (
           <div className={styles.row}>
             <span className={`${styles.avatar} ${styles.avatarBot}`} aria-hidden="true">D</span>
@@ -348,7 +481,11 @@ export default function ChatPage() {
               )}
               <div className={styles.body}>
                 <div className={isUser ? styles.bodyUser : styles.bodyBot}>
-                  {t.text}
+                  {isUser ? (
+                    t.text
+                  ) : t.text ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{t.text}</ReactMarkdown>
+                  ) : null}
                   {isStreamingTarget && <span className={styles.caret} aria-hidden="true" />}
                 </div>
                 {line && <div className={styles.meta}>{line}</div>}
@@ -361,6 +498,15 @@ export default function ChatPage() {
                   </details>
                 )}
                 <div className={styles.time}>{formatTime(t.at)}</div>
+                {!isUser && t.text.trim() && (
+                  <button
+                    type="button"
+                    className={styles.copy}
+                    onClick={() => copyText(t.text, i)}
+                  >
+                    {copiedIdx === i ? "Tersalin" : "Salin"}
+                  </button>
+                )}
               </div>
               {isUser && (
                 <span className={`${styles.avatar} ${styles.avatarUser}`} aria-hidden="true">U</span>
@@ -370,55 +516,15 @@ export default function ChatPage() {
         })}
       </div>
 
-      {connError && (
-        <div className={styles.error} role="alert">
-          <span>{connError}</span>
-          <button type="button" className={styles.retry} onClick={retryLast}>
-            Coba lagi
-          </button>
-        </div>
-      )}
+      {errorBlock}
 
-      <form
-        className={styles.composer}
-        onSubmit={(e) => {
-          e.preventDefault();
-          send();
-        }}
-      >
-        <div className={styles.composerRow}>
-          <textarea
-            ref={inputRef}
-            rows={1}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              autoGrow();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            placeholder="Tulis pesan (maks 4000 huruf)…"
-            maxLength={4000}
-            disabled={busy}
-            className={styles.input}
-            aria-label="Pesan chat"
-          />
-          {!busy ? (
-            <button type="submit" className={styles.send}>
-              Kirim
-            </button>
-          ) : (
-            <button type="button" className={styles.stop} onClick={stopStream}>
-              Stop
-            </button>
-          )}
-        </div>
-        <div className={styles.hint}>Enter kirim • Shift+Enter baris baru • token = token turn final</div>
-      </form>
+      {composerForm}
+      <div className={styles.microfooter}>
+        <span className={dotClass} aria-hidden="true" />
+        <span>{statusText}</span>
+      </div>
+        </>
+      )}
     </div>
   );
 }

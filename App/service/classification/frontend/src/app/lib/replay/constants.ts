@@ -23,32 +23,6 @@ export const SIGNALS = [
   "frequencySetpoint",
 ] as const;
 
-// 5R Rapi — daftar 13 sinyal live untuk tampung grafik per-sinyal.
-export const LIVE_SIGNALS = [
-  "outputFrequency",
-  "motorSpeed",
-  "motorTorque",
-  "outputPower",
-  "inputVoltage",
-  "arusRmsU",
-  "arusRmsV",
-  "arusRmsW",
-  "ambientTemperature",
-  "controlBoardTemperature",
-  "inverterTemperature",
-  "motorEstimatedTemperature",
-  "frequencySetpoint",
-] as const;
-export type LiveSignal = typeof LIVE_SIGNALS[number];
-export const LIVE_MAX_PER_SIGNAL = 2000;
-export const LIVE_EVICTION_MS = 60 * 60 * 1000; // 1 hour event-time
-export const NON_LIVE_SIGNALS: ReplaySignal[] = [
-  "motorCurrent",
-  "hoursRun",
-  "outputVoltage",
-  "fluxActual",
-];
-
 export const REPLAY_SIGNAL_LABELS: Record<
   ReplaySignal,
   string

@@ -107,7 +107,7 @@ test.describe("Chat PoC", () => {
     await page.getByRole("button", { name: "Kirim" }).click();
     await expect(page.getByText("Siap", { exact: true })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/dexmin • helena-3\.0-flash • 7,2 dtk • 3\.101 token/)).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText("(token turn final)")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("(token turn terakhir)")).toBeVisible({ timeout: 15000 });
     const details = page.locator("details").filter({ hasText: "penalaran" });
     await expect(details).toBeVisible({ timeout: 15000 });
     await details.locator("summary").click();
