@@ -4,7 +4,7 @@
 
 Setiap pembacaan sensor **terakhir** dinilai langsung apa adanya — bukan rata-rata beberapa pembacaan. Tiga ukuran pompa (`500` / `3000` / `5000`) memakai batas yang berbeda-beda untuk daya, arus, dan torsi.
 
-- Hanya penilaian **turbulensi** yang melihat ke belakang: ia membandingkan arus sekarang dengan **rata-rata 30 pembacaan sebelumnya**.
+- Hanya penilaian **turbulensi** yang melihat ke belakang: ia membandingkan arus sekarang dengan **referensi adaptif (MA30 bila histori ≥30, CMA_n bila histori tipis)**.
 - Gangguan lain hanya melihat **pembacaan terakhir**.
 - **Pompa tersangkut sampah** diputuskan langsung begitu polanya cocok — tanpa menunggu bukti berulang.
 
@@ -37,7 +37,7 @@ Tidak memakai kecepatan putar (RPM). Bila ada data yang hilang, syaratnya tidak 
 
 **Bedanya dengan pompa tersangkut sampah:** yang ini memakai batas frekuensi tetap `≤ 10 Hz` dan cukup 3 dari 4 syarat lain; banyak sampah membandingkan frekuensi dengan **setpoint** dan mewajibkan **semua** 4 syarat.
 
-**Bedanya dengan turbulensi:** turbulensi wajib melihat penyimpangan arus terhadap rata-rata 30 pembacaan; banyak sampah tidak.
+**Bedanya dengan turbulensi:** turbulensi wajib melihat penyimpangan arus terhadap referensi adaptif (MA30/CMA); banyak sampah tidak.
 
 ## UNBALANCE — Satu Fasa Menyimpang 10% Sudah Cukup
 
@@ -69,10 +69,18 @@ Pompa dinyatakan turbulensi bila **semua** syarat ini terpenuhi:
 
 1. **Frekuensi** di bawah setpoint operasi (ketat, `<`).
 2. **Daya** ≥ batas pompa (`75` / `250` / `400` kW).
-3. **Arus menyimpang** ≥ `10 A` dari rata-rata 30 pembacaan sebelumnya. Contoh: rata-rata 150 A + arus sekarang 163 A (selisih 13) → terpenuhi; selisih tepat 10 → terpenuhi; selisih 7 → tidak.
+3. **Arus menyimpang** ≥ `10 A` dari referensi adaptif: rata-rata 30 pembacaan sebelumnya bila histori ≥30 (`MA30`), atau rata-rata seadanya (`CMA_n`, 1 ≤ n < 30) bila histori tipis. Contoh: rata-rata 150 A + arus sekarang 163 A (selisih 13) → terpenuhi; selisih tepat 10 → terpenuhi; selisih 7 → tidak.
 4. **Torsi** ≥ `90%`.
 
-Tidak memakai RPM. Untuk syarat arus dibutuhkan **30 pembacaan sebelumnya yang valid** (total 31 dengan pembacaan sekarang). Bila riwayat terputus (kesenjangan data) → penilaian mulai lagi dari awal; bila riwayat kurang atau arus kosong → syarat tidak terpenuhi → **tidak terdeteksi**. Alasan riwayat kurang tercatat di `limitations` (lihat contoh hasil); status capability tetap **siap dinilai** — tidak ada status capability khusus untuk riwayat kurang.
+Tidak memakai RPM. Referensi arus selalu trailing (tidak termasuk pembacaan sekarang). Bila riwayat terputus (kesenjangan data) → penilaian mulai lagi dari awal; bila **tanpa histori sama sekali** atau arus kosong → syarat tidak terpenuhi → **tidak terdeteksi**. Alasan tercatat di `limitations` (lihat contoh hasil); status capability tetap **siap dinilai** — tidak ada status capability khusus untuk riwayat kurang. Kondisi match mencatat referensi yang dipakai (`vs MA30…` atau `vs CMAn…`).
+
+### Kenapa rata-rata + deviasi (bukan angka mati)
+
+1. **Arus tak punya angka mati lintas tier.** 500 A bisa normal di 5000_lps tapi janggal di 500_lps — maka yang dinilai bukan arusnya, melainkan **penyimpangannya dari kebiasaan** (`|A_i − A_ref| ≥ 10`). Tiga syarat lain (frekuensi, daya, torsi) satuannya baku, jadi bisa absolut.
+2. **Rata-rata harus trailing.** Arus yang sedang dinilai tidak boleh ikut menghitung rata-rata — kalau ikut, lompatannya sendiri menarik rata-rata ke arahnya dan menyamarkan deviasi (termometer yang ikut panas).
+3. **Kenapa 30.** Kompromi: cukup banyak untuk meredam noise sesaat, cukup sedikit untuk masih mewakili kondisi sekarang (±2,5 menit operasi); pas juga dengan jendela evidence 31 (30 + 1).
+4. **Kenapa ada CMA.** Saat histori tipis (pompa baru nyala, habis gap), baseline seadanya lebih berguna daripada menolak menilai — dengan tradeoff yang diakui: vonis dari sedikit data lebih berisik. Karena itu setiap match mencatat `vs MA30…` / `vs CMAn…` agar kualitas vonis bisa diaudit.
+5. **Catatan ambang.** `10 A` absolut di semua tier: sensitif di tier besar (±1% dari 850 A), kasar di tier kecil. Bila turbulensi terlalu sering MATCH di 5000_lps, tersangka pertamanya ambang ini — kandidat perbaikan: ambang relatif/persentase atau per-tier.
 
 **Pantauan langsung:** data arus belum dikirim lewat jalur pantauan, sehingga turbulensi selalu **tidak terdeteksi** sampai datanya tersedia. Inilah pembeda turbulensi dari banyak sampah.
 

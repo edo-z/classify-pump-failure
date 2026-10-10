@@ -68,13 +68,17 @@ def get_t_a_params(rule_def: dict) -> tuple[int, float]:
 
 def compute_t_a(readings: list[SensorReading], window: int = 30, threshold: float = 10.0
 ) -> dict[str, Any]:
-    """Trailing moving average T_A: |A_i - MA_i| >= threshold.
+    """Referensi arus adaptif T_A: |A_i - A_ref| >= threshold.
 
-    MA_i = mean dari `window` nilai motor_current valid sebelumnya
-    (exclude current, trailing, bukan n->n+30). Caller menjamin readings
-    sudah kontigu event-time (gap -> evidence di-clear).
-    Kumpulkan mundur dari i-1 hingga `window` nilai valid terkumpul.
-    Kurang dari window / A_i None -> insufficient (T_A FALSE).
+    A_ref = CMA_n (mean n histori valid) bila 1 <= n < window,
+    MA penuh `window` bila n >= window (trailing, exclude current).
+    Caller menjamin readings sudah kontigu event-time
+    (gap -> evidence di-clear). n = 0 / A_i None -> insufficient.
+
+    Rationale (detail: docs/06 §TURBULENSI "Kenapa rata-rata + deviasi"):
+    arus tak punya angka mati lintas tier sehingga yang dinilai adalah
+    deviasi dari kebiasaan; trailing agar spike tak mencemari baseline;
+    CMA agar histori tipis tetap bisa dinilai (dengan tradeoff berisik).
     """
     if not readings:
         return {"T_A": False, "insufficient": True, "reason": "no_readings"}
@@ -90,17 +94,20 @@ def compute_t_a(readings: list[SensorReading], window: int = 30, threshold: floa
             prev_values.append(float(v))
             if len(prev_values) >= window:
                 break
-    if len(prev_values) < window:
+    if len(prev_values) < 1:
         return {
             "A": float(current),
-            "collected": len(prev_values),
+            "collected": 0,
             "need": window,
             "T_A": False,
             "insufficient": True,
-            "reason": f"need_{window}_got_{len(prev_values)}",
+            "reason": f"need_{window}_got_0",
         }
+    # 5R CMA (selaras spek): histori tipis pakai rata-rata seadanya.
+    n = min(len(prev_values), window)
+    ref_kind = "MA30" if len(prev_values) >= window else "CMA"
     # prev_values saat ini urutan mundur; mean tidak peduli urutan
-    ma = sum(prev_values) / window
+    ma = sum(prev_values[:n]) / n
     delta = float(current) - ma
     t_a = abs(delta) >= threshold
     return {
@@ -109,7 +116,9 @@ def compute_t_a(readings: list[SensorReading], window: int = 30, threshold: floa
         "Delta_A": delta,
         "Abs_Delta_A": abs(delta),
         "threshold": threshold,
-        "window": window,
+        "window": n,
+        "ref_kind": ref_kind,
+        "collected": len(prev_values),
         "T_A": bool(t_a),
         "insufficient": False,
     }

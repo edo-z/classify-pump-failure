@@ -46,7 +46,7 @@ def test_v1_happy_path_shape():
     body = r.json()
     assert body["profile_id"] == "5000_lps"
     assert body["namespace"] == "96"
-    assert body["rules_version"] == "1.0"
+    assert body["rules_version"] == "1.1"
     assert body["evidence_size"] == 5
     cls = body["classification"]
     assert cls["trouble_type"] in (

@@ -195,8 +195,14 @@ def evaluate_tier_rules(
             if t_kw:
                 matched_conds.append(f"power={kw:.1f} >= {kw_ref:g}")
             if t_a:
+                n_ref = t_a_res.get("window")
+                ref_label = (
+                    f"CMA{n_ref}"
+                    if t_a_res.get("ref_kind") == "CMA"
+                    else f"MA{n_ref}"
+                )
                 matched_conds.append(
-                    f"current={t_a_res.get('A'):.1f} vs MA{t_a_res.get('window')}"
+                    f"current={t_a_res.get('A'):.1f} vs {ref_label}"
                     f"{t_a_res.get('MA_A'):.1f} Δ{t_a_res.get('Delta_A'):+.1f}"
                     f" |Δ|{t_a_res.get('Abs_Delta_A'):.1f}>={t_a_res.get('threshold'):g}"
                 )

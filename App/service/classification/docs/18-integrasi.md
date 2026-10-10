@@ -41,7 +41,8 @@ Aturan main:
 - `profile_id`: `500`/`3000`/`5000` + `_lps` (mis. `5000_lps`).
 - `setpoint_freq`: opsional; override BE, else fallback profil (resolver milik server).
 - `namespace`: ID site dari sistem BE (mis. `"96"`) — **wajib unik per site** (syarat isolasi counter di engine kami).
-- `readings`: 1–40 sampel, **urut bebas** (server mengurutkan event-time). Kirimkan sampel terakhir yang dimiliki; **server yang memangkas** evidensi trailing 31 pasca-gap 10 dtk.
+- `readings`: 1–40 sampel, **urut bebas** (server mengurutkan event-time). Kirimkan sampel terakhir yang dimiliki; **server yang memangkas** evidensi trailing 31 pasca-gap 10 dtk. Jendela pendek tetap bisa vonis turbulensi via referensi adaptif CMA (kondisi match mencatat `vs CMAn…` vs `vs MA30…`).
+  Kenapa CMA ada: turbulensi mengukur deviasi dari kebiasaan arus (bukan angka mati), dan kebiasaan seadanya lebih berguna daripada menolak menilai — lihat `docs/06` §TURBULENSI "Kenapa rata-rata + deviasi". Vonis berlabel `CMA` berasal dari histori tipis: perlakukan dengan kewaspadaan lebih tinggi.
 - `timestamp`: ISO-8601 **wajib ber-zona waktu** (waktu kejadian dari sensor, bukan waktu terima); naive → `422`.
 - 16 field numerik semua nullable; **hilang = `null`, jangan `0`**; key asing diabaikan.
 
@@ -78,7 +79,7 @@ const { classification } = await r.json();
 {
   "profile_id": "5000_lps",
   "namespace": "96",
-  "rules_version": "1.0",
+  "rules_version": "1.1",
   "evidence_size": 12,
   "classification": {
     "pump_id": 5000,

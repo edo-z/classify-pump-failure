@@ -89,7 +89,7 @@ Murni per-sampel, selalu full-resolution: tiap sampel dinilai dengan evidensi tr
 { "profile_id":"5000_lps", "setpoint_freq":40.0, "namespace":"96",
   "readings":[{ "timestamp":"2026-06-12T14:33:56+07:00", "output_frequency":40.0, "input_voltage":380.0 }] }
 // response
-{ "profile_id":"5000_lps", "namespace":"96", "rules_version":"1.0",
+{ "profile_id":"5000_lps", "namespace":"96", "rules_version":"1.1",
   "evidence_size":12, "classification":{...ClassificationResult...} }
 ```
 

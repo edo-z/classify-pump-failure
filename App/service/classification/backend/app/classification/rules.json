@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "description": "Threshold rules for pump trouble classification. Tier 3000 l/s fully defined.",
   "tiers": {
     "3000": {
