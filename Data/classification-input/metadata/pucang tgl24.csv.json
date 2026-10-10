@@ -1,0 +1,22 @@
+{
+  "document_id": "pucang tgl24.csv",
+  "filename": "pucang tgl24.csv",
+  "file_type": "csv",
+  "size_bytes": 78858,
+  "created_at": "2026-10-09T02:02:45.083193+00:00",
+  "row_count": 1529,
+  "column_count": 5,
+  "columns": [
+    "Timestamp WIB",
+    "Frequency (Hz)",
+    "Motor Current (A)",
+    "Power (kW)",
+    "Torque"
+  ],
+  "status": "LOADED",
+  "error_code": null,
+  "error_title": null,
+  "user_message": null,
+  "technical_detail": null,
+  "next_stage": "NORMALIZATION"
+}

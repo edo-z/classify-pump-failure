@@ -1,0 +1,12 @@
+# 5R Rawat — jangan commit artefak lokal, env, dan rahasia.
+venv/
+node_modules/
+.next/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Env & rahasia lokal (JANGAN commit)
+.env
+Neo4j.txt
+Nvidia.txt

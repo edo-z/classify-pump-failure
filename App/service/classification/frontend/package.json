@@ -1,0 +1,28 @@
+{
+  "name": "pump-classification-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "check:deadcode": "knip --include files,dependencies",
+    "check:deadcode:full": "knip --include exports,types",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "echarts": "^6.1.0",
+    "next": "16.3.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "knip": "^6.40.0",
+    "typescript": "^7.0.2"
+  }
+}

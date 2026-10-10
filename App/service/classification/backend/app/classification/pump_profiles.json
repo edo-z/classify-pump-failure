@@ -1,0 +1,294 @@
+{
+  "version": 1,
+  "source": "Datasheet Trouble Pompa - Trouble Panel.csv",
+  "common_thresholds": {
+    "panel_overheat": {
+      "logic": "OR",
+      "ambient_temperature_c": {
+        "operator": ">=",
+        "value": 60
+      },
+      "control_board_temperature_c": {
+        "operator": ">=",
+        "value": 60
+      },
+      "inverter_temperature_c": {
+        "operator": ">=",
+        "value": 60
+      }
+    }
+  },
+  "profiles": {
+    "500_lps": {
+      "capacity_lps": 500,
+      "operating_setpoint": {
+        "frequency_hz": null,
+        "rpm": null,
+        "torque": null,
+        "source": "Admin",
+        "status": "REQUIRED"
+      },
+      "thresholds": {
+        "pompa_tersangkut_sampah": {
+          "frequency_hz": {
+            "operator": "<",
+            "value": 10
+          },
+          "power_kw": {
+            "operator": ">=",
+            "value": 75
+          },
+          "current_a": {
+            "operator": ">=",
+            "value": 157
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 110,
+            "unit": "%"
+          },
+          "rpm": {
+            "operator": "<",
+            "value": 100
+          }
+        },
+        "turbulensi": {
+          "frequency": "BELOW_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": ">=",
+            "value": 75
+          },
+          "current_deviation_ma": {
+            "window": 30,
+            "threshold_a": 10,
+            "operator": "|A-MA30|>=",
+            "note": "T_A trailing MA30"
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 90,
+            "unit": "%"
+          }
+        },
+        "banyak_sampah": {
+          "frequency": "AT_OR_BELOW_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": ">=",
+            "value": 75
+          },
+          "current_a": {
+            "operator": ">=",
+            "value": 157
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 90,
+            "unit": "%"
+          }
+        },
+        "dry_run": {
+          "frequency": "AT_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": "<=",
+            "value": 50.025,
+            "note": "0.667*75"
+          },
+          "current_a": {
+            "operator": "<=",
+            "value": 100.48,
+            "note": "0.64*157"
+          },
+          "torque": {
+            "operator": "<",
+            "value": 70,
+            "unit": "%"
+          }
+        }
+      }
+    },
+    "3000_lps": {
+      "capacity_lps": 3000,
+      "operating_setpoint": {
+        "frequency_hz": null,
+        "rpm": null,
+        "torque": null,
+        "source": "Admin",
+        "status": "REQUIRED"
+      },
+      "thresholds": {
+        "pompa_tersangkut_sampah": {
+          "frequency_hz": {
+            "operator": "<",
+            "value": 10
+          },
+          "power_kw": {
+            "operator": ">=",
+            "value": 250
+          },
+          "current_a": {
+            "operator": ">=",
+            "value": 517
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 110,
+            "unit": "%"
+          },
+          "rpm": {
+            "operator": "<",
+            "value": 100
+          }
+        },
+        "turbulensi": {
+          "frequency": "BELOW_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": ">=",
+            "value": 250
+          },
+          "current_deviation_ma": {
+            "window": 30,
+            "threshold_a": 10,
+            "operator": "|A-MA30|>=",
+            "note": "T_A trailing MA30"
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 90,
+            "unit": "%"
+          }
+        },
+        "banyak_sampah": {
+          "frequency": "AT_OR_BELOW_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": ">=",
+            "value": 250
+          },
+          "current_a": {
+            "operator": ">=",
+            "value": 517
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 90,
+            "unit": "%"
+          }
+        },
+        "dry_run": {
+          "frequency": "AT_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": "<=",
+            "value": 166.75,
+            "note": "0.667*250"
+          },
+          "current_a": {
+            "operator": "<=",
+            "value": 330.88,
+            "note": "0.64*517"
+          },
+          "torque": {
+            "operator": "<",
+            "value": 70,
+            "unit": "%"
+          }
+        }
+      }
+    },
+    "5000_lps": {
+      "capacity_lps": 5000,
+      "operating_setpoint": {
+        "frequency_hz": null,
+        "rpm": null,
+        "torque": null,
+        "source": "Admin",
+        "status": "REQUIRED"
+      },
+      "thresholds": {
+        "pompa_tersangkut_sampah": {
+          "frequency_hz": {
+            "operator": "<",
+            "value": 10
+          },
+          "power_kw": {
+            "operator": ">=",
+            "value": 400
+          },
+          "current_a": {
+            "operator": ">=",
+            "value": 867
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 110,
+            "unit": "%"
+          },
+          "rpm": {
+            "operator": "<",
+            "value": 100
+          }
+        },
+        "turbulensi": {
+          "frequency": "BELOW_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": ">=",
+            "value": 400
+          },
+          "current_deviation_ma": {
+            "window": 30,
+            "threshold_a": 10,
+            "operator": "|A-MA30|>=",
+            "note": "T_A trailing MA30"
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 90,
+            "unit": "%"
+          }
+        },
+        "banyak_sampah": {
+          "frequency": "AT_OR_BELOW_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": ">=",
+            "value": 400
+          },
+          "current_a": {
+            "operator": ">=",
+            "value": 867
+          },
+          "torque": {
+            "operator": ">=",
+            "value": 90,
+            "unit": "%"
+          }
+        },
+        "dry_run": {
+          "frequency": "AT_OPERATING_SETPOINT",
+          "power_kw": {
+            "operator": "<=",
+            "value": 266.8,
+            "note": "0.667*400"
+          },
+          "current_a": {
+            "operator": "<=",
+            "value": 554.88,
+            "note": "0.64*867"
+          },
+          "torque": {
+            "operator": "<",
+            "value": 70,
+            "unit": "%"
+          }
+        }
+      }
+    }
+  },
+  "unsupported_or_incomplete": {
+    "motor_estimated_temperature": {
+      "status": "INCOMPLETE_SOURCE",
+      "reason": "Source specifies operator '>' but does not provide a numeric threshold."
+    },
+    "5000_lps_unbalance_torque": {
+      "status": "INCOMPLETE_SOURCE",
+      "reason": "Source torque condition is incomplete."
+    }
+  }
+}

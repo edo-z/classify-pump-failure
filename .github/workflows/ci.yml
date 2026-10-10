@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r App/service/classification/backend/requirements.txt
+      - run: python -m py_compile $(find App/service/classification/backend/app -name "*.py")
+      - run: python -m pytest App/service/classification/backend/tests -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --cwd App/service/classification/frontend
+      - run: bun run --cwd App/service/classification/frontend typecheck
+      - run: bun run --cwd App/service/classification/frontend check:deadcode
+      - run: bun run --cwd App/service/classification/frontend build
+
+  e2e-live:
+    runs-on: ubuntu-latest
+    services:
+      mosquitto:
+        image: eclipse-mosquitto:2
+        ports:
+          - 1883:1883
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r App/service/classification/backend/requirements.txt
+      - run: python -m uvicorn app.main:app --host 127.0.0.1 --port 3031 &
+        working-directory: App/service/classification/backend
+      - run: sleep 6 && curl -fsS http://127.0.0.1:3031/health
+      - run: python scripts/seed_e2e_docs.py
+        working-directory: App/service/classification
+      - run: python scripts/e2e_mqtt_live.py
+        working-directory: App/service/classification
+
