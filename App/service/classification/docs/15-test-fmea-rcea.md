@@ -100,3 +100,47 @@ upload 201 → normalize/telemetry/run/scan/setpoints 200 → delete 200
 | N4 | Bookmark `/realtime` lama → 404 | 3 | 4 | 2 | **24** | DITERIMA (by design) |
 | N5 | Coverage E2E live hilang | 6 | 2 | 4 | **48** | DITERIMA (disengaja; batch + chat coverage tetap) |
 | N6 | CMA turbulensi: vonis dari histori tipis (false alarm naik) | 8 | 3 | 2 | **48** | TERKENDALI 2026-10-10 (rules 1.1; 5 uji CMA baru: CMA5/CMA1/boundary/zero-history + `ref_kind` di audit; contract test kunci `rules_version`) |
+
+## 6. Amendemen 2026-10-11 — ekspansi e2e agentic (tester-army/e2e, model 9router/hermes)
+
+Suite `frontend/tests-e2e/`: **10/10 hijau** (`readiness` 4, `reliability` 3,
+`documents` 1, `five-s` 2). Playwright `e2e/` tak tersentuh; kedua runner hidup
+berdampingan. Lokasi config: `frontend/e2e.config.ts` (bun; deps `e2e`, `ai@^7`,
+`@ai-sdk/openai-compatible`, `@e2e-dev/web`, `zod`).
+
+### 6.1 Settings optimal (diterapkan)
+
+| Setting | Nilai | Alasan |
+|---|---|---|
+| `workers` | `1` | RCEA-1b: paralel berebut state global → flaky |
+| `retries` | `1` | Retry murah (mereplay cache) |
+| `cache` | `read-write` lokal (CI otomatis `read-only`) | Run ulang replay tanpa model call |
+| `trace` / `video` | default (`retain-on-failure` / `off`) | Trace = sumber RCA; video on-demand |
+| `app` | tanpa `command`, url `:3030` | Nempel systemd prod (RCEA-1c: lawan `next start`, bukan `next dev`) |
+| `agents.default` | hermes + `context` kosakata app + `maxSteps/maxModelCalls: 12` + `judgmentTimeout: 120_000` | Cap biaya; hermes lambat di layar 200+ node (RCEA-5) |
+| tag | `readiness`, `reliability`, `5s` | Run selektif (`--tag 5s`) |
+
+### 6.2 FMEA suite agentic (urut RPN awal tertinggi)
+
+| # | Failure mode | S/O/D | RPN | Mitigasi → RPN sisa | Status |
+|---|---|---|---|---|---|
+| E1 | Vonis 5S model false-positive gugurkan run | 5/6/5 | **150** | Gerbang = `expect` keras; penilaian report-only (`console.log` + triase §6.3) → 3/4/2 = **24** | TERKENDALI (terbukti: 3 temuan run-1 tertriase, run-2/3 hijau) |
+| E5 | Interferensi run paralel (RCEA-1b terulang) | 7/5/4 | **140** | `workers: 1` → 5/2/2 = **20** | TERKENDALI |
+| E3 | `responseFormat` tak didukung 9router/hermes (extract tanpa schema enforcement) | 5/6/4 | **120** | Skema sederhana + assert struktural + repair round bawaan → 4/4/3 = **48** | DIPANTAU (warning AI SDK tiap run) |
+| E4 | Chat live bergantung stream `:4100` | 6/4/4 | **96** | five-s/chat hanya kirim + cek bubble user (tak tunggu stream) → 4/3/3 = **36** | TERKENDALI |
+| E2 | `extract` STEP_TIMEOUT 30s (hermes lambat) | 4/7/3 | **84** | `judgmentTimeout: 120_000` → 3/3/2 = **18** | TERKENDALI (RCEA-5) |
+| E7 | Cache replay basi | 5/3/5 | **75** | `--strict-cache` di CI (nanti) + `e2e cache clear` manual → 4/2/3 = **24** | DIPANTAU |
+| E6 | Kuota 9router habis (`MODEL_PROVIDER_FAILED`) | 6/3/2 | **36** | Readiness+reliability 0-call; cache menekan panggilan → 6/2/2 = **24** | DIPANTAU |
+
+### 6.3 RCEA-4 — triase 3 temuan 5S `/documents` (run-1, model)
+
+1. "tombol unggah mati" → **BUKAN temuan**: `disabled={!file || uploading}` = by design (Seiketsu/disiplin). False positive model.
+2. "label tombol unggah ganda" (label "Upload CSV" vs tombol "Upload") → pola standar label+aksi. **DITERIMA**.
+3. "gaya label kartu beda dari preset dan tabel" → kabur, tanpa bukti node. **DITOLAK** (tak dapat diuji).
+- Observasi sampingan (faktual, dari trace): console warning preload CSS `06fnbfe4aoybx.css` tak terpakai di `/documents`. Seiso minor. **DIPANTAU**.
+
+### 6.4 RCEA-5 — `extract` STEP_TIMEOUT (E2, RPN 84→18)
+
+- **5 Whys:** (1) Mengapa timeout? 1 model call >30s. (2) Mengapa lama? layar 206 node + 151 opsi dropdown. (3) Mengapa default 30s? `judgmentTimeout` default agent. (4) Mengapa tak terlihat di wiring? wiring hanya `generateText` (tanpa observasi layar). (5) Akar: budget judgment tak disesuaikan ke model lambat.
+- **Korektif:** `judgmentTimeout: 120_000` di `agents.default`.
+- **Preventif:** aturan "model baru wajib uji extract di layar terberat dulu" + catat warning `responseFormat` (E3) sebagai sinyal D.
