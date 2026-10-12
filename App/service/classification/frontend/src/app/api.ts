@@ -338,3 +338,70 @@ export function buildChatStreamUrl(
   params.append("language", lang === "en" ? "en" : "lapangan");
   return `/api/llm/chat/${encodeURIComponent(sessionId)}/stream?${params.toString()}`;
 }
+
+// 5R Simulasi — klasifikasi jendela sintetis via kontrak v1 stabil
+// (stateless, tanpa CSV). Namespace wajib prefix sim- agar counter
+// tak bocor ke site produksi.
+export type V1Reading = {
+  timestamp: string;
+  motor_speed: number | null;
+  output_frequency: number | null;
+  motor_current: number | null;
+  motor_torque: number | null;
+  output_power: number | null;
+  hours_run: number | null;
+  output_voltage: number | null;
+  ambient_temperature: number | null;
+  control_board_temperature: number | null;
+  inverter_temperature: number | null;
+  input_voltage: number | null;
+  flux_actual: number | null;
+  motor_estimated_temperature: number | null;
+  arus_rms_u: number | null;
+  arus_rms_v: number | null;
+  arus_rms_w: number | null;
+};
+
+export type V1MatchedRule = {
+  trouble_type: string;
+  matched_conditions: string[];
+  total_conditions: number;
+};
+
+export type V1Classification = {
+  trouble_type: string;
+  matched_rules: V1MatchedRule[];
+  sensor_snapshot: Record<string, number | null>;
+  limitations: string[];
+  evaluation_status: string;
+};
+
+export type V1ClassifyResult = {
+  profile_id: string;
+  namespace: string;
+  rules_version: string;
+  evidence_size: number;
+  classification: V1Classification;
+};
+
+export async function classifyWindow(
+  profileId: string,
+  setpointFreq: number | null,
+  namespace: string,
+  readings: V1Reading[],
+): Promise<V1ClassifyResult> {
+  const response = await fetch("/api/v1/classify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      profile_id: profileId,
+      setpoint_freq: setpointFreq,
+      namespace,
+      readings,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(await responseError(response));
+  }
+  return response.json();
+}

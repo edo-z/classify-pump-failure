@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/documents", label: "Klasifikasi Dokumen", desc: "Batch & Scan", icon: "📄" },
   { href: "/chat", label: "Chat Asisten", desc: "Dexmin SSE", icon: "D" },
+  { href: "/simulation", label: "Simulasi Sensor", desc: "What-if • SIMULATION", icon: "S" },
   { href: "/admin", label: "Admin Setpoint", desc: "Konfigurasi", icon: "⚙" },
 ];
 
@@ -22,7 +23,7 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         <div className="nav-section-label">Analisis</div>
-        {navItems.slice(0, 2).map((item) => {
+        {navItems.slice(0, 3).map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/");
           // 5R Tanpa-ikon: item chat memakai monogram lingkaran agar sejajar
           // dengan ikon menu lain tanpa menambah keluarga ikon baru.
@@ -43,7 +44,7 @@ export default function Sidebar() {
         })}
 
         <div className="nav-section-label">Konfigurasi</div>
-        {navItems.slice(2).map((item) => {
+        {navItems.slice(3).map((item) => {
           const active = pathname === item.href;
           return (
             <Link key={item.href} href={item.href} className={`nav-item ${active ? "active" : ""}`}>

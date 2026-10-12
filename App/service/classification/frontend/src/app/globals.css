@@ -497,6 +497,192 @@ h2 {
   outline-offset: 2px;
 }
 
+/* 5R Dashboard simulasi — KPI + grid panel + progressive disclosure. */
+.sim-chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  white-space: nowrap;
+}
+
+.sim-phase-running { color: #166534; background: #f0fdf4; border-color: #16a34a; }
+.sim-phase-stopped { color: #92400e; background: #fffbeb; border-color: #f59e0b; }
+
+.sim-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.sim-kpi {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  min-width: 0;
+}
+
+.sim-kpi .k-label { font-size: 0.72rem; color: #6b7280; }
+.sim-kpi .k-value { font-size: 1.35rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+.sim-kpi .k-sub { font-size: 0.72rem; color: #6b7280; }
+
+.sim-dash {
+  display: grid;
+  grid-template-columns: minmax(340px, 5fr) 7fr;
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: start;
+}
+
+.sim-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  min-width: 0;
+}
+
+.sim-details { margin-top: 0.75rem; }
+.sim-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #374151;
+  padding: 0.35rem 0;
+}
+.sim-details > summary:hover { color: #1d4ed8; }
+.sim-details > summary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .sim-dash { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .sim-kpis { grid-template-columns: 1fr; }
+}
+
+/* 5R Simulasi — badge, grid sensor, monitor. Prefix sim- agar tak bocor. */
+.sim-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  white-space: nowrap;
+}
+
+.sim-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sim-row {
+  display: grid;
+  grid-template-columns: auto minmax(100px, 150px) minmax(0, 1fr) 78px 92px minmax(70px, auto);
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: white;
+  min-width: 0;
+}
+
+.sim-row > * {
+  min-width: 0;
+}
+
+.sim-enable input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2563eb;
+}
+
+.sim-label {
+  font-size: 0.82rem;
+  color: #111827;
+}
+
+.sim-label small {
+  color: #6b7280;
+}
+
+.sim-slider {
+  width: 100%;
+  accent-color: #2563eb;
+}
+
+.sim-number {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.82rem;
+  width: 100%;
+}
+
+.sim-amp {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.78rem;
+  background: white;
+}
+
+.sim-actual {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.sim-trouble {
+  display: inline-block;
+  color: white;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  padding: 0.35rem 0.9rem;
+}
+
+.sim-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+
+.sim-hist {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+}
+
+@media (max-width: 640px) {
+  .sim-row {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+  .sim-actual {
+    text-align: left;
+  }
+}
+
 .upload-box {
   display: flex;
   align-items: center;
