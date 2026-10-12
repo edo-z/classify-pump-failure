@@ -42,6 +42,8 @@ export default function ChatPage() {
   const [connError, setConnError] = useState<string | null>(null);
   const [siteId, setSiteId] = useState("");
   const [documentId, setDocumentId] = useState("");
+  // Bahasa jawaban: lapangan (default, id==lapangan) atau en.
+  const [lang, setLang] = useState<"lapangan" | "en">("lapangan");
   const [streamWords, setStreamWords] = useState(0);
   const [mounted, setMounted] = useState(false);
   // 5R Stabilitas + FMEA 502: kalau 20 dtk tanpa delta pertama (RAG lambat /
@@ -178,6 +180,7 @@ export default function ChatPage() {
     const url = buildChatStreamUrl(getSessionId(), raw, history, {
       siteId: siteId || null,
       documentId: documentId || null,
+      profileId: lang,
     });
 
     const src = createChatEventSource(url, {
@@ -362,6 +365,20 @@ export default function ChatPage() {
             style={{ width: 200 }}
           />
         </label>
+        <label className={styles.field}>
+          Bahasa
+          <select
+            value={lang}
+            onChange={(e) =>
+              setLang(e.target.value === "en" ? "en" : "lapangan")
+            }
+            style={{ width: 140 }}
+            aria-label="Bahasa jawaban"
+          >
+            <option value="lapangan">Lapangan</option>
+            <option value="en">English</option>
+          </select>
+        </label>
       </div>
     </details>
   );
@@ -430,10 +447,11 @@ export default function ChatPage() {
         </span>
       </header>
 
-      {(siteId.trim() || documentId.trim()) && (
+      {(siteId.trim() || documentId.trim() || lang !== "lapangan") && (
         <div className={styles.contextPills} aria-label="Konteks aktif">
           {siteId.trim() && <span className={styles.pill}>Site {siteId.trim()}</span>}
           {documentId.trim() && <span className={styles.pill}>Dok {documentId.trim()}</span>}
+          {lang !== "lapangan" && <span className={styles.pill}>EN</span>}
         </div>
       )}
 

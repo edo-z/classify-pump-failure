@@ -16,6 +16,7 @@ Layanan Klasifikasi Gangguan Pompa memantau kondisi pompa (penggerak/VSD dan pan
 - **Pompa tersangkut sampah langsung diputuskan** begitu polanya terpenuhi (frekuensi ≤ 10 Hz dan minimal 3 dari 4 tanda lain) — tanpa menunggu bukti berulang.
 - **Satu jalur penilaian:**
   - **Kelompok (batch)** — file dinilai murni per-sampel untuk dipindai menyeluruh.
+  - **API langsung `POST /v1/classify`** — stateless, tanpa CSV, untuk tim BE (mesin sama). Lihat `18` dan `19`.
 
 ## Konteks Sistem
 

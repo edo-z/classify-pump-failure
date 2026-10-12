@@ -108,7 +108,11 @@ Contoh pompa 500: frekuensi `35.00 == 35.00` + daya `20 ≤ 50,025` + arus `40 �
 
 ## Hasil Penilaian
 
-Setiap jenis gangguan dinilai satu per satu: **terdeteksi** atau **tidak terdeteksi**. Bila tidak ada yang terdeteksi → hasilnya `normal`. Urutan gangguan yang cocok pertama menjadi jenis utama; semuanya tercatat apa adanya.
+Setiap jenis gangguan dinilai satu per satu: **terdeteksi** atau **tidak terdeteksi**. Bila tidak ada yang terdeteksi → hasilnya `normal`.
+
+Klasifikasi bersifat seperti notifikasi/bunyi: semua yang terdeteksi tercatat di `matched_rules` dan sama pentingnya — tidak ada pemenang, tidak ada prioritas bahaya. `trouble_type` hanya salah satu yang aktif (yang dicek duluan secara teknis: tier → panel → unbalance → voltage), bukan juara.
+
+Semua pola langsung diputuskan 1x (`count_trigger: 1`). Hasil scan tidak disimpan dan dihitung ulang tiap pindai. Bahasa sederhana: lihat `19`.
 
 Status kelengkapan data: **data lengkap** bila ada penilaian yang bisa dijalankan, **data tidak cukup** bila tidak ada sama sekali.
 

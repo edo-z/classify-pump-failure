@@ -57,7 +57,7 @@ Bagian ini menjelaskan catatan internal sistem — **tidak dikirim ke luar**, ha
 |-------|------|
 | `pump_id` | Nomor pompa |
 | `timestamp` | Waktu dari pembacaan terakhir |
-| `trouble_type` | Gangguan yang cocok pertama (atau `normal`) |
+| `trouble_type` | Salah satu notifikasi aktif (atau `normal` bila tidak ada). Urutan teknis, bukan prioritas bahaya. |
 | `matched_rules` | Semua pola gangguan yang terpenuhi |
 | `sensor_snapshot` | Ringkasan angka sensor terakhir |
 | `readings_count` | Jumlah pembacaan yang dinilai |
@@ -102,6 +102,8 @@ Nama kolom di file: `Start Time (WIB)`, `Motor Speed used`, `Output Frekuensi`, 
 - `motor_torque` dalam `%` — batas `110/90/50%`.
 
 ### Status Pantauan per Pompa
+
+> ARSIP — jalur live/MQTT dihapus 2026-10-10. Berlaku hanya untuk `run/scan/v1`, lihat `19`. Bagian di bawah ini sisa historis, bukan perilaku aktif.
 
 Tiap pompa menyimpan di memori:
 

@@ -280,18 +280,21 @@ export function validateChatMessage(message: string): string | null {
 
 // Ambil N turn terakhir, selalu JSON valid ("[]"/"[...]" ) —
 // salah format ditoleransi jadi "[]" agar tak kena 422 sia-sia.
-// PENTING: hanya {role,text} yang dikirim — kolom tampil-saja (at) dipangkas.
+// KONTRAK BERSIH: kirim [{role,content}] — kolom tampil-saja (at) dan
+// legacy {text} dipangkas. Backend tetap terima {text} sebagai fallback.
 export function buildChatHistory(turns: ChatTurn[]): string {
   try {
     const last = turns
       .filter((t) => t.text.trim())
       .slice(-CHAT_HISTORY_TURNS)
-      .map((t) => ({ role: t.role, text: t.text }));
+      .map((t) => ({ role: t.role, content: t.text }));
     return JSON.stringify(last);
   } catch {
     return "[]";
   }
 }
+
+export type ChatLang = "lapangan" | "en";
 
 export type ChatStreamOpts = {
   siteId?: string | null;
@@ -312,6 +315,8 @@ export function buildChatStreamUrl(
   // Resik: jangan kirim "null"/"" — FastAPI menolaknya / mengotori query.
   if (opts?.siteId?.trim()) params.append("site_id", opts.siteId.trim());
   if (opts?.documentId?.trim()) params.append("document_id", opts.documentId.trim());
-  if (opts?.profileId?.trim()) params.append("profile_id", opts.profileId.trim());
+  // Bahasa lapangan default: "id" dinormalisasi jadi "lapangan" (alias).
+  const lang = (opts?.profileId ?? "lapangan").trim().toLowerCase();
+  params.append("profile_id", lang === "en" ? "en" : "lapangan");
   return `/api/llm/chat/${encodeURIComponent(sessionId)}/stream?${params.toString()}`;
 }
