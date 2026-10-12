@@ -39,7 +39,7 @@ test(
   { tags: ['reliability'] },
   async ({ app, screen }) => {
     await app.open('/chat');
-    await screen.getByPlaceholder('Tulis pesan (maks 4000 huruf)…').fill('   ');
+    await screen.getByPlaceholder('Tulis pesan…').fill('   ');
     await screen.getByRole('button', 'Kirim').click();
     await expect(screen.getByText('Pesan kosong', { exact: false })).toBeVisible();
   },

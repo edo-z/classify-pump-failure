@@ -65,6 +65,8 @@ export default function ChatPage() {
   // 5R Interaksi: salin jawaban + smart scroll (hanya saat di bawah).
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const nearBottomRef = useRef(true);
+  // Tombol floating "Ke terbaru": tampil bila >120px dari bawah.
+  const [showJump, setShowJump] = useState(false);
   const copyTimerRef = useRef<number | null>(null);
 
   function clearStallTimer() {
@@ -117,6 +119,15 @@ export default function ChatPage() {
     if (!el) return;
     nearBottomRef.current =
       el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+    setShowJump(el.scrollHeight - el.scrollTop - el.clientHeight > 120);
+  }
+
+  function jumpToLatest() {
+    const el = threadRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    nearBottomRef.current = true;
+    setShowJump(false);
+    inputRef.current?.focus({ preventScroll: true });
   }
 
   useEffect(() => {
@@ -180,7 +191,7 @@ export default function ChatPage() {
     const url = buildChatStreamUrl(getSessionId(), raw, history, {
       siteId: siteId || null,
       documentId: documentId || null,
-      profileId: lang,
+      language: lang,
     });
 
     const src = createChatEventSource(url, {
@@ -286,29 +297,32 @@ export default function ChatPage() {
         : conn === "live" && streamWords === 0
           ? "Mulai menerima jawaban…"
           : conn === "live"
-            ? `Menerima jawaban… (${streamWords} kata)`
+            ? "Menerima jawaban…"
             : conn === "error"
               ? "Terjadi gangguan — lihat pesan di bawah."
               : "Siap. Riwayat 10 turn tersimpan di browser.";
 
-  // 5R Metadata done: susun baris info kecil. Aturan: label persona (model)
-  // tampil bila ada; mesin beneran (model_actual) tampil bila beda; token
-  // tampil bila total_tokens angka (null = disembunyikan, itu normal);
-  // latensi 1 desimal id-ID. Semua absen = tidak ada footer sama sekali.
-  function metaLine(meta: ChatDoneInfo): string | null {
-    const parts: string[] = [];
-    if (meta.model?.trim()) parts.push(meta.model.trim());
-    if (meta.model_actual?.trim() && meta.model_actual.trim() !== meta.model?.trim()) {
-      parts.push(meta.model_actual.trim());
-    }
+  // 5R Metadata: operator tidak lihat metadata di jawaban. Semuanya
+  // (respons, model, mesin, token, penalaran) masuk panel Detail teknis.
+  // Baris developer untuk panel Detail teknis (tertutup default).
+  function techRows(meta: ChatDoneInfo): string[] {
+    const rows: string[] = [];
     if (typeof meta.latency_s === "number" && Number.isFinite(meta.latency_s)) {
-      parts.push(`${meta.latency_s.toLocaleString("id-ID", { maximumFractionDigits: 1 })} dtk`);
+      rows.push(`Respons ${meta.latency_s.toLocaleString("id-ID", { maximumFractionDigits: 1 })} dtk`);
     }
-    const total = meta.usage?.total_tokens;
-    if (typeof total === "number" && Number.isFinite(total)) {
-      parts.push(`${Math.round(total).toLocaleString("id-ID")} token (token turn terakhir)`);
+    if (meta.model?.trim()) rows.push(`Model ${meta.model.trim()}`);
+    if (meta.model_actual?.trim() && meta.model_actual.trim() !== meta.model?.trim()) {
+      rows.push(`Mesin ${meta.model_actual.trim()}`);
     }
-    return parts.length ? parts.join(" • ") : null;
+    const tok = (v?: number | null) =>
+      typeof v === "number" && Number.isFinite(v) ? Math.round(v).toLocaleString("id-ID") : null;
+    const parts = [
+      tok(meta.usage?.prompt_tokens) ? `masuk ${tok(meta.usage?.prompt_tokens)}` : null,
+      tok(meta.usage?.completion_tokens) ? `keluar ${tok(meta.usage?.completion_tokens)}` : null,
+      tok(meta.usage?.total_tokens) ? `total ${tok(meta.usage?.total_tokens)}` : null,
+    ].filter((p): p is string => !!p);
+    if (parts.length) rows.push(`Token ${parts.join(" • ")}`);
+    return rows;
   }
 
   // 5R Komposisi: blok render dipakai ulang di cabang hero (tengah)
@@ -319,28 +333,33 @@ export default function ChatPage() {
       <p className={styles.heroText}>
         Mentor teknisi pompa — tanya soal gangguan, ambang, dan tindak lanjut di lapangan.
       </p>
-      <ul className={styles.heroList}>
-        <li>Jelaskan 9 jenis gangguan + ambangnya (360/410 V, 60 °C, unbalance 10%).</li>
-        <li>Bedakan pola mirip: turbulensi vs banyak sampah, dry run vs normal.</li>
-        <li>Sarankan langkah aman berikutnya sebelum Anda eksekusi.</li>
-      </ul>
     </div>
   );
 
+  const chipBtn = (s: string) => (
+    <button
+      key={s}
+      type="button"
+      className={styles.chip}
+      disabled={busy}
+      onClick={() => send(s)}
+    >
+      {s}
+    </button>
+  );
+
   const chipsBlock = (
-    <div className={styles.chips}>
-      {SUGGESTIONS.map((s) => (
-        <button
-          key={s}
-          type="button"
-          className={styles.chip}
-          disabled={busy}
-          onClick={() => send(s)}
-        >
-          {s}
-        </button>
-      ))}
-    </div>
+    <>
+      <div className={styles.chips}>
+        {SUGGESTIONS.slice(0, 3).map(chipBtn)}
+      </div>
+      <details className={styles.moreChips}>
+        <summary>Contoh lain</summary>
+        <div className={styles.chips}>
+          {SUGGESTIONS.slice(3).map(chipBtn)}
+        </div>
+      </details>
+    </>
   );
 
   const contextBlock = (
@@ -415,7 +434,7 @@ export default function ChatPage() {
               send();
             }
           }}
-          placeholder="Tulis pesan (maks 4000 huruf)…"
+          placeholder="Tulis pesan…"
           maxLength={4000}
           disabled={busy}
           className={styles.input}
@@ -431,20 +450,18 @@ export default function ChatPage() {
           </button>
         )}
       </div>
-        <div className={styles.hint}>Enter kirim • Shift+Enter baris baru • {input.length}/4000 • token turn terakhir</div>
+        <div className={styles.hint}>Enter kirim • Shift+Enter baris baru{input.length > 3500 ? ` • ${input.length}/4000` : ""}</div>
     </form>
   );
 
   return (
     <div className={styles.shell}>
-      <header className={styles.header}>
+      <header className={styles.header} title={mounted ? `Sesi ${sessionRef.current}` : "Sesi…"}>
         <span className={`${styles.avatar} ${styles.avatarBot}`} aria-hidden="true">D</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className={styles.title}>Dexmin</div>
+          <div className={styles.subtitle}>Mentor pompa lapangan</div>
         </div>
-        <span style={{ fontSize: "0.72rem", color: "#6b7280" }}>
-          Sesi <code>{mounted ? `${sessionRef.current.slice(0, 8)}…` : "…"}</code>
-        </span>
       </header>
 
       {(siteId.trim() || documentId.trim() || lang !== "lapangan") && (
@@ -463,7 +480,6 @@ export default function ChatPage() {
             {heroBlock}
             {composerForm}
             {chipsBlock}
-            {contextBlock}
             {errorBlock}
           </div>
         </div>
@@ -481,7 +497,6 @@ export default function ChatPage() {
                 <span />
                 <span />
               </span>
-              {stalled && <span className={styles.stallNote}>masih mencari referensi…</span>}
             </div>
           </div>
         )}
@@ -489,7 +504,7 @@ export default function ChatPage() {
           const isStreamingTarget =
             busy && t.role === "assistant" && i === turns.length - 1 && t.text.trim();
           const meta = t.role === "assistant" ? metas[i] : undefined;
-          const line = meta ? metaLine(meta) : null;
+          const techs = meta ? techRows(meta) : [];
           const reasoning = meta?.reasoning_preview?.trim() ? meta.reasoning_preview.trim() : null;
           const isUser = t.role === "user";
           return (
@@ -506,13 +521,13 @@ export default function ChatPage() {
                   ) : null}
                   {isStreamingTarget && <span className={styles.caret} aria-hidden="true" />}
                 </div>
-                {line && <div className={styles.meta}>{line}</div>}
-                {reasoning && (
-                  <details className={styles.meta}>
-                    <summary style={{ cursor: "pointer" }}>
-                      penalaran{typeof meta?.reasoning_chars === "number" ? ` (${meta.reasoning_chars} char)` : ""}
-                    </summary>
-                    <pre>{reasoning}</pre>
+                {(techs.length > 0 || reasoning) && (
+                  <details className={styles.tech}>
+                    <summary>Detail teknis</summary>
+                    {techs.map((r) => (
+                      <div key={r} className={styles.techRow}>{r}</div>
+                    ))}
+                    {reasoning && <pre className={styles.techPre}>{reasoning}</pre>}
                   </details>
                 )}
                 <div className={styles.time}>{formatTime(t.at)}</div>
@@ -534,13 +549,26 @@ export default function ChatPage() {
         })}
       </div>
 
+      {showJump && (
+        <button
+          type="button"
+          className={styles.jumpBtn}
+          onClick={jumpToLatest}
+          aria-label="Ke pesan terbaru"
+        >
+          ↓ Ke terbaru
+        </button>
+      )}
+
       {errorBlock}
 
       {composerForm}
-      <div className={styles.microfooter}>
-        <span className={dotClass} aria-hidden="true" />
-        <span>{statusText}</span>
-      </div>
+      {(busy || conn === "error" || stalled) && (
+        <div className={styles.microfooter}>
+          <span className={dotClass} aria-hidden="true" />
+          <span>{statusText}</span>
+        </div>
+      )}
         </>
       )}
     </div>

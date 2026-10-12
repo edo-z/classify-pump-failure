@@ -47,12 +47,12 @@ test.describe("Chat PoC", () => {
   });
 
   test("T1 kirim halo -> jawaban mengalir -> IDLE", async ({ page }) => {
-    await page.getByPlaceholder("Tulis pesan (maks 4000 huruf)…").fill("halo");
+    await page.getByPlaceholder("Tulis pesan…").fill("halo");
     await page.getByRole("button", { name: "Kirim" }).click();
     await expect(page.getByText("Halo dari mock")).toBeVisible({ timeout: 15000 });
-    // Stream selesai -> tombol kembali Kirim (idle), status siap
+    // Stream selesai -> tombol kembali Kirim (idle), status mikro disembunyikan
     await expect(page.getByRole("button", { name: "Kirim" })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/Siap\. Riwayat 10 turn/)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Siap\. Riwayat 10 turn/)).toHaveCount(0);
   });
 
   test("T2 pesan kosong -> validasi lokal, tanpa request", async ({ page }) => {
@@ -60,7 +60,7 @@ test.describe("Chat PoC", () => {
     page.on("request", (req) => {
       if (req.url().includes("/api/llm/")) requested = true;
     });
-    await page.getByPlaceholder("Tulis pesan (maks 4000 huruf)…").fill("   ");
+    await page.getByPlaceholder("Tulis pesan…").fill("   ");
     await page.getByRole("button", { name: "Kirim" }).click();
     await expect(page.getByText(/Pesan kosong/)).toBeVisible({ timeout: 5000 });
     expect(requested).toBe(false);
@@ -77,15 +77,15 @@ test.describe("Chat PoC", () => {
       });
     });
     await page.reload();
-    await page.getByPlaceholder("Tulis pesan (maks 4000 huruf)…").fill("halo lama");
+    await page.getByPlaceholder("Tulis pesan…").fill("halo lama");
     await page.getByRole("button", { name: "Kirim" }).click();
     // Penenang muncul selagi menunggu kata pertama (batas stall 20 dtk)
-    await expect(page.getByText(/masih mencari referensi/)).toBeVisible({ timeout: 25000 });
+    await expect(page.getByText(/mencari referensi/)).toBeVisible({ timeout: 25000 });
     // Setelah respons tiba, jawaban tetap ditempel normal
     await expect(page.getByText("Halo dari mock")).toBeVisible({ timeout: 15000 });
   });
 
-  test("T4 done lengkap -> footer meta + reasoning details", async ({ page }) => {
+  test("T4 done lengkap -> latensi ringkas + Detail teknis", async ({ page }) => {
     await page.unroute("**/api/llm/chat/*/stream*");
     const doneFull = [
       "event: delta",
@@ -103,20 +103,24 @@ test.describe("Chat PoC", () => {
       });
     });
     await page.reload();
-    await page.getByPlaceholder("Tulis pesan (maks 4000 huruf)…").fill("info model?");
+    await page.getByPlaceholder("Tulis pesan…").fill("info model?");
     await page.getByRole("button", { name: "Kirim" }).click();
     await expect(page.getByText("Siap", { exact: true })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/dexmin • helena-3\.0-flash • 7,2 dtk • 3\.101 token/)).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText("(token turn terakhir)")).toBeVisible({ timeout: 15000 });
-    const details = page.locator("details").filter({ hasText: "penalaran" });
+    // Metadata teknis tersembunyi secara default (termasuk latensi)
+    await expect(page.getByText(/7,2 dtk/)).not.toBeVisible();
+    await expect(page.getByText(/helena-3\.0-flash/)).not.toBeVisible();
+    await expect(page.getByText(/total 3\.101/)).not.toBeVisible();
+    const details = page.locator("details").filter({ hasText: "Detail teknis" });
     await expect(details).toBeVisible({ timeout: 15000 });
     await details.locator("summary").click();
+    await expect(page.getByText(/Respons 7,2 dtk/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/helena-3\.0-flash/)).toBeVisible({ timeout: 5000 });
     await expect(page.getByText("potongan… [truncated]")).toBeVisible({ timeout: 5000 });
   });
 
   test("T5 done lama ({}) -> tetap IDLE, tanpa footer, tanpa error", async ({ page }) => {
     // Mock bawaan beforeEach sudah mengirim done {} — kompatibel mundur.
-    await page.getByPlaceholder("Tulis pesan (maks 4000 huruf)…").fill("halo lawas");
+    await page.getByPlaceholder("Tulis pesan…").fill("halo lawas");
     await page.getByRole("button", { name: "Kirim" }).click();
     await expect(page.getByText("Halo dari mock")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: "Kirim" })).toBeVisible({ timeout: 15000 });
@@ -127,5 +131,37 @@ test.describe("Chat PoC", () => {
     await page.getByRole("button", { name: "apa penyebab undervoltage pada pompa?", exact: true }).click();
     await expect(page.getByText("Halo dari mock")).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: "Kirim" })).toBeVisible({ timeout: 15000 });
+  });
+
+  test("T7 URL pakai language, bukan profile_id", async ({ page }) => {
+    let streamUrl = "";
+    page.on("request", (req) => {
+      if (req.url().includes("/api/llm/chat/")) streamUrl = req.url();
+    });
+    await page.getByPlaceholder("Tulis pesan…").fill("halo");
+    await page.getByRole("button", { name: "Kirim" }).click();
+    await expect(page.getByText("Halo dari mock")).toBeVisible({ timeout: 15000 });
+    expect(streamUrl).toContain("language=lapangan");
+    expect(streamUrl).not.toContain("profile_id=");
+  });
+
+  test("T8 jauh dari bawah -> tombol Ke terbaru muncul", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 400 });
+    for (const m of ["satu", "dua", "tiga", "empat", "lima"]) {
+      await page.getByPlaceholder("Tulis pesan…").fill(m);
+      await page.getByRole("button", { name: "Kirim" }).click();
+      await expect(page.getByRole("button", { name: "Kirim" })).toBeVisible({ timeout: 15000 });
+    }
+    const thread = page.locator('div[aria-live="polite"]');
+    await expect
+      .poll(async () => thread.evaluate((el) => el.scrollHeight - el.clientHeight))
+      .toBeGreaterThan(200);
+    await thread.evaluate((el) => {
+      el.scrollTop = 0;
+    });
+    const jump = page.getByRole("button", { name: "Ke pesan terbaru" });
+    await expect(jump).toBeVisible({ timeout: 5000 });
+    await jump.click();
+    await expect(jump).toHaveCount(0);
   });
 });

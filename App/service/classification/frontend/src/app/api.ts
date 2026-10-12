@@ -299,7 +299,7 @@ export type ChatLang = "lapangan" | "en";
 export type ChatStreamOpts = {
   siteId?: string | null;
   documentId?: string | null;
-  profileId?: string | null;
+  language?: string | null;
 };
 
 export function buildChatStreamUrl(
@@ -316,7 +316,8 @@ export function buildChatStreamUrl(
   if (opts?.siteId?.trim()) params.append("site_id", opts.siteId.trim());
   if (opts?.documentId?.trim()) params.append("document_id", opts.documentId.trim());
   // Bahasa lapangan default: "id" dinormalisasi jadi "lapangan" (alias).
-  const lang = (opts?.profileId ?? "lapangan").trim().toLowerCase();
-  params.append("profile_id", lang === "en" ? "en" : "lapangan");
+  // Chat pakai `language`, bukan `profile_id` (klasifikasi tetap `profile_id`).
+  const lang = (opts?.language ?? "lapangan").trim().toLowerCase();
+  params.append("language", lang === "en" ? "en" : "lapangan");
   return `/api/llm/chat/${encodeURIComponent(sessionId)}/stream?${params.toString()}`;
 }
