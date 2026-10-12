@@ -15,7 +15,17 @@ CLASSIFICATION_INPUT_DIR=/home/aldo/Documents/Agent-Maintenance/Data/classificat
 CLASSIFICATION_NORMALIZED_DIR=/home/aldo/Documents/Agent-Maintenance/Data/classification-normalized
 ```
 
-Data tersimpan: file mentah, info file, dan data siap nilai. Hapus file juga menghapus data siap nilainya yang sudah tak bertuan.
+Data tersimpan: file mentah, info file, dan data siap nilai. Hapus file memindahkan semuanya ke `.trash/` (bisa dikembalikan manual), bukan unlink permanen — insiden 2026-10-12.
+
+Backend produksi jalan via systemd (`classify-pump-backend.service`, Restart=always). Jangan start manual via nohup — kalah balapan port. Restart resmi + audit hapus:
+
+```bash
+systemctl --user restart classify-pump-backend
+journalctl --user -u classify-pump-backend --since "10 minutes ago" | grep -i delete
+# INFO app.api.documents: DELETE /documents/X.csv -> 200|409
+```
+
+Hapus saat dokumen sedang dianalisis (telemetry/normalisasi/run/scan) ditolak `409`. pytest memakai folder tmp (`conftest.py`), tak pernah menyentuh data asli.
 
 ## Cek Kesehatan
 

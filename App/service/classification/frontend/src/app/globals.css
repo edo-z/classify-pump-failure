@@ -246,6 +246,12 @@ main {
   border-color: #2563eb;
 }
 
+.top-controls-row button.danger {
+  background: white;
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
 .top-controls-row button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -329,6 +335,39 @@ h2 {
   font-size: 0.85rem;
 }
 
+.document-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.document-actions .danger-small {
+  padding: 0.35rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #dc2626;
+  background: white;
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.document-actions .danger-small:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.document-actions .danger-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.document-actions .danger-small:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .message {
   padding: 1rem;
   border: 1px solid #dddddd;
@@ -378,6 +417,84 @@ h2 {
   line-height: 1;
   cursor: pointer;
   color: #6b7280;
+}
+
+/* Modal konfirmasi hapus — gaya toast-error: putih + aksen merah. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 70;
+}
+
+.modal-box {
+  background: white;
+  border: 1px solid #dc2626;
+  border-left: 4px solid #dc2626;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  padding: 1.1rem 1.25rem;
+  max-width: min(92vw, 26rem);
+  width: 100%;
+  font-size: 0.88rem;
+  color: #111827;
+}
+
+.modal-box p {
+  margin: 0.5rem 0 0;
+  color: #374151;
+}
+
+.modal-box p strong {
+  font-size: 1rem;
+  color: #111827;
+  word-break: break-all;
+}
+
+.modal-sub {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.modal-title {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.modal-actions button {
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modal-actions button.primary {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.modal-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.modal-actions button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .upload-box {

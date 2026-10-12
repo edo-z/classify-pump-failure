@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import {
+  deleteDocument,
   getDocuments,
   getTelemetryReplay,
   getTierRefs,
@@ -70,6 +71,11 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // 5R Hapus per baris: target modal bisa doc terpilih (tombol atas)
+  // atau doc lain (tombol tiap baris daftar).
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzePhase, setAnalyzePhase] = useState("");
   const [analyzeElapsed, setAnalyzeElapsed] = useState(0);
@@ -368,6 +374,58 @@ export default function Home() {
     }
   }
 
+  // 5R Hapus dataset: modal konfirmasi -> DELETE -> pindah otomatis
+  // ke file sehat + reset total (termasuk cache scan anti-basi) bila
+  // yang dihapus doc terpilih; doc lain cukup dibuang dari daftar.
+  async function handleDeleteDocument() {
+    const targetId = pendingDeleteId ?? selectedDocumentId;
+    if (!targetId || analyzingRef.current || deleting) return;
+    setDeleting(true);
+    const targetName =
+      documents.find((d) => d.document_id === targetId)?.filename ?? targetId;
+    const wasSelected = targetId === selectedDocumentId;
+    try {
+      await deleteDocument(targetId);
+      const remaining = documents.filter(
+        (d) => d.document_id !== targetId && d.status === "LOADED",
+      );
+      setDocuments((prev) => prev.filter((d) => d.document_id !== targetId));
+      if (wasSelected) {
+        setSelectedDocumentId(remaining.length ? remaining[0].document_id : "");
+        setTelemetryError("");
+        setReplayDataset(null);
+        setReplayError("");
+        setClassificationResult(null);
+        setFailurePoints([]);
+        setScanDone(false);
+        setScanError("");
+        setFailureVisibleCount(50);
+        lastScanRef.current = null;
+      }
+      setShowDeleteModal(false);
+      setPendingDeleteId(null);
+      pushToast("success", `${targetName} dihapus.`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Gagal menghapus dataset.";
+      pushToast("error", msg);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // Esc menutup modal hapus (kecuali sedang menghapus).
+  useEffect(() => {
+    if (!showDeleteModal) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !deleting) {
+        setShowDeleteModal(false);
+        setPendingDeleteId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showDeleteModal, deleting]);
+
   async function handleUpload() {
     if (!file) {
       return;
@@ -402,6 +460,15 @@ export default function Home() {
 
   const selectedDocRowCount =
     documents.find((d) => d.document_id === selectedDocumentId)?.row_count ?? 0;
+
+  // 5R Insiden 2026-10-12: modal wajib tunjukkan nama besar + sisa,
+  // agar tak ada keraguan file mana yang dihapus.
+  const deleteTargetName =
+    documents.find((d) => d.document_id === (pendingDeleteId ?? selectedDocumentId))
+      ?.filename ?? pendingDeleteId ?? selectedDocumentId;
+  const deleteRestCount = documents.filter(
+    (d) => d.document_id !== (pendingDeleteId ?? selectedDocumentId),
+  ).length;
 
   return (
     <main>
@@ -475,6 +542,18 @@ export default function Home() {
               {analyzing
                 ? `${analyzePhase || "Menganalisis…"}${analyzeElapsed > 0 ? ` (${analyzeElapsed} dtk)` : ""}`
                 : "Analisis File Ini"}
+            </button>
+
+            <button
+              type="button"
+              className="danger"
+              disabled={!selectedDocumentId || analyzing || deleting}
+              onClick={() => {
+                setPendingDeleteId(selectedDocumentId);
+                setShowDeleteModal(true);
+              }}
+            >
+              {deleting ? "Menghapus…" : "Hapus"}
             </button>
 
             <div style={{ flex: 1 }} />
@@ -804,7 +883,21 @@ export default function Home() {
                       {document.row_count.toLocaleString("id-ID")} baris · {document.column_count} kolom · {formatSize(document.size_bytes)}
                     </p>
                   </div>
-                  <span>{statusLabel(document.status)}</span>
+                  <div className="document-actions">
+                    <span>{statusLabel(document.status)}</span>
+                    <button
+                      type="button"
+                      className="danger-small"
+                      disabled={analyzing || deleting}
+                      aria-label={`Hapus ${document.filename}`}
+                      onClick={() => {
+                        setPendingDeleteId(document.document_id);
+                        setShowDeleteModal(true);
+                      }}
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -812,6 +905,60 @@ export default function Home() {
           {telemetryError && <p className="message">{telemetryError}</p>}
         </section>
       </div>
+
+      {showDeleteModal && (
+        <div
+          className="modal-overlay"
+          data-testid="delete-modal"
+          onClick={() => {
+            if (!deleting) {
+              setShowDeleteModal(false);
+              setPendingDeleteId(null);
+            }
+          }}
+        >
+          <div
+            className="modal-box"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Konfirmasi hapus dataset"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-title">Hapus dataset?</div>
+            <p>
+              <strong>{deleteTargetName}</strong> beserta telemetry dan hasil
+              scan ikut terhapus (dipindah ke trash, bisa dikembalikan).
+            </p>
+            <p className="modal-sub">
+              {deleteRestCount > 0
+                ? `${deleteRestCount.toLocaleString("id-ID")} dokumen lain tetap tersimpan.`
+                : "Ini satu-satunya dokumen tersimpan."}
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                autoFocus
+                disabled={deleting}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setPendingDeleteId(null);
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="primary"
+                data-testid="delete-confirm"
+                disabled={deleting}
+                onClick={handleDeleteDocument}
+              >
+                {deleting ? "Menghapus…" : "Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="toast-stack" aria-live="polite">
         {toasts.map((toast) => (

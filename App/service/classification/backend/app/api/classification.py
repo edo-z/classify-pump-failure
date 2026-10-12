@@ -19,6 +19,8 @@ from app.data_pipeline.document_storage import (
 )
 from app.data_pipeline.service import (
     get_telemetry_dataset,
+    mark_document_in_progress,
+    unmark_document_in_progress,
 )
 
 
@@ -42,6 +44,9 @@ def run_classification(
     req: ClassificationRunRequest,
 ) -> ClassificationPipelineResult:
     """Nilai murni per-sampel ala live: pembacaan terakhir + evidensi trailing."""
+    mark_document_in_progress(
+        req.document_id
+    )
     try:
         return classify_document(
             document_id=req.document_id,
@@ -88,6 +93,11 @@ def run_classification(
             detail=str(exc),
         ) from exc
 
+    finally:
+        unmark_document_in_progress(
+            req.document_id
+        )
+
 
 @router.get(
     "/tier-refs",
@@ -113,6 +123,9 @@ def scan_classification(
     Pindai seluruh file per-sampel ala live (full-resolution, tiap sampel
     dinilai dengan evidensi trailingnya).
     """
+    mark_document_in_progress(
+        document_id
+    )
     try:
         dataset = get_telemetry_dataset(document_id)
         points = scan_classification_points(
@@ -139,3 +152,7 @@ def scan_classification(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    finally:
+        unmark_document_in_progress(
+            document_id
+        )

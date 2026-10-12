@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,6 +86,50 @@ class NormalizedDocumentNotFoundError(
     NormalizationStorageError
 ):
     pass
+
+
+logger = logging.getLogger(
+    __name__
+)
+
+
+def _trash_dir(
+    base: Path,
+) -> Path:
+    path = base / ".trash"
+    path.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    return path
+
+
+def _move_to_trash(
+    path: Path,
+    trash_base: Path,
+) -> str | None:
+    """Pindah file ke .trash (bisa dikembalikan), bukan unlink langsung.
+
+    Insiden 2026-10-12: hapus permanen tak teraudit. Return nama tujuan
+    untuk log audit, atau None bila file memang tidak ada.
+    """
+    if not path.exists():
+        return None
+    stamp = datetime.now(
+        timezone.utc
+    ).strftime(
+        "%Y%m%dT%H%M%S"
+    )
+    dest = (
+        _trash_dir(
+            trash_base
+        )
+        / f"{stamp}_{path.name}"
+    )
+    path.rename(
+        dest
+    )
+    return dest.name
 
 
 def validate_document_id(
@@ -444,26 +489,45 @@ def delete_document(
         document_id
     )
 
-    if raw_path.exists():
-        raw_path.unlink()
+    # Pindah ke .trash (bisa dikembalikan), bukan unlink permanen.
+    trashed_raw = _move_to_trash(
+        raw_path,
+        STORAGE_ROOT,
+    )
 
-    if metadata_path.exists():
-        metadata_path.unlink()
+    trashed_metadata = _move_to_trash(
+        metadata_path,
+        STORAGE_ROOT,
+    )
 
     # Cleanup derived artifacts (telemetry & normalized) if present
     try:
         telemetry_path = _telemetry_path(document_id)
-        if telemetry_path.exists():
-            telemetry_path.unlink()
+        trashed_telemetry = _move_to_trash(
+            telemetry_path,
+            NORMALIZED_STORAGE_ROOT,
+        )
     except Exception:
-        pass
+        trashed_telemetry = None
 
     try:
         normalized_path = _normalized_path(document_id)
-        if normalized_path.exists():
-            normalized_path.unlink()
+        trashed_normalized = _move_to_trash(
+            normalized_path,
+            NORMALIZED_STORAGE_ROOT,
+        )
     except Exception:
-        pass
+        trashed_normalized = None
+
+    logger.info(
+        "DELETE document_id=%s raw=%s metadata=%s "
+        "telemetry=%s normalized=%s",
+        document_id,
+        trashed_raw,
+        trashed_metadata,
+        trashed_telemetry,
+        trashed_normalized,
+    )
 
     return metadata
 

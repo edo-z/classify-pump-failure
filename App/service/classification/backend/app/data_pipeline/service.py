@@ -30,6 +30,39 @@ class SourceDocumentNotReadyError(
     pass
 
 
+class DocumentInUseError(
+    ValueError
+):
+    pass
+
+
+# 5R/Rawat: kunci hapus-saat-dianalisis. Set dalam memori proses
+# (cukup untuk 1 worker uvicorn); tiap pemakaian wajib finally-unmark.
+_IN_PROGRESS_DOCUMENTS: set[str] = set()
+
+
+def mark_document_in_progress(
+    document_id: str,
+) -> None:
+    _IN_PROGRESS_DOCUMENTS.add(
+        document_id
+    )
+
+
+def unmark_document_in_progress(
+    document_id: str,
+) -> None:
+    _IN_PROGRESS_DOCUMENTS.discard(
+        document_id
+    )
+
+
+def is_document_in_progress(
+    document_id: str,
+) -> bool:
+    return document_id in _IN_PROGRESS_DOCUMENTS
+
+
 def ingest_document(
     filename: str,
     content: bytes,
@@ -61,6 +94,13 @@ def list_documents() -> list[
 def delete_document(
     document_id: str,
 ) -> StoredDocumentMetadata:
+    if is_document_in_progress(
+        document_id
+    ):
+        raise DocumentInUseError(
+            "Document is being analyzed: "
+            f"{document_id}"
+        )
     return _delete_document(
         document_id
     )
@@ -69,31 +109,39 @@ def delete_document(
 def normalize_document(
     document_id: str,
 ) -> NormalizedDocument:
-    metadata = read_document_metadata(
+    mark_document_in_progress(
         document_id
     )
-
-    if metadata.status != "LOADED":
-        raise SourceDocumentNotReadyError(
-            "Source document is not ready "
-            "for normalization: "
-            f"{metadata.status}"
+    try:
+        metadata = read_document_metadata(
+            document_id
         )
 
-    raw_document = read_raw_document(
-        document_id
-    )
+        if metadata.status != "LOADED":
+            raise SourceDocumentNotReadyError(
+                "Source document is not ready "
+                "for normalization: "
+                f"{metadata.status}"
+            )
 
-    result = _normalize_raw_document(
-        document_id,
-        raw_document,
-    )
+        raw_document = read_raw_document(
+            document_id
+        )
 
-    store_normalized_document(
-        result
-    )
+        result = _normalize_raw_document(
+            document_id,
+            raw_document,
+        )
 
-    return result
+        store_normalized_document(
+            result
+        )
+
+        return result
+    finally:
+        unmark_document_in_progress(
+            document_id
+        )
 
 
 def get_normalized_document(
@@ -108,31 +156,39 @@ def get_normalized_document(
 def create_telemetry_dataset(
     document_id: str,
 ) -> TelemetryDataset:
-    metadata = read_document_metadata(
+    mark_document_in_progress(
         document_id
     )
-
-    if metadata.status != "LOADED":
-        raise SourceDocumentNotReadyError(
-            "Source document is not ready "
-            "for telemetry conversion: "
-            f"{metadata.status}"
+    try:
+        metadata = read_document_metadata(
+            document_id
         )
 
-    raw_document = read_raw_document(
-        document_id
-    )
+        if metadata.status != "LOADED":
+            raise SourceDocumentNotReadyError(
+                "Source document is not ready "
+                "for telemetry conversion: "
+                f"{metadata.status}"
+            )
 
-    dataset = build_telemetry_dataset(
-        document_id,
-        raw_document,
-    )
+        raw_document = read_raw_document(
+            document_id
+        )
 
-    store_telemetry_dataset(
-        dataset
-    )
+        dataset = build_telemetry_dataset(
+            document_id,
+            raw_document,
+        )
 
-    return dataset
+        store_telemetry_dataset(
+            dataset
+        )
+
+        return dataset
+    finally:
+        unmark_document_in_progress(
+            document_id
+        )
 
 
 def get_telemetry_dataset(

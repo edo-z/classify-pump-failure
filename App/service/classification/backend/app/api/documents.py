@@ -5,7 +5,10 @@ from fastapi import (
     Request,
 )
 
+import logging
+
 from app.data_pipeline.service import (
+    DocumentInUseError,
     delete_document as delete_document_from_pipeline,
     get_document as get_document_from_pipeline,
     ingest_document,
@@ -27,6 +30,10 @@ from app.data_pipeline.document_storage import (
 router = APIRouter(
     prefix="/documents",
     tags=["documents"],
+)
+
+logger = logging.getLogger(
+    __name__
 )
 
 # 5R/Rawat + FMEA F5: batasi upload agar CSV raksasa tidak OOM/disk penuh.
@@ -144,6 +151,11 @@ def delete_document(
             )
         )
 
+        logger.info(
+            "DELETE /documents/%s -> 200",
+            document_id,
+        )
+
         return StoredDocumentPreview(
             **metadata.model_dump(),
             preview_rows=[],
@@ -158,5 +170,15 @@ def delete_document(
     except DocumentNotFoundError as exc:
         raise HTTPException(
             status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except DocumentInUseError as exc:
+        logger.info(
+            "DELETE /documents/%s -> 409 in-use",
+            document_id,
+        )
+        raise HTTPException(
+            status_code=409,
             detail=str(exc),
         ) from exc

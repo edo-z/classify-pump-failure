@@ -4,6 +4,13 @@ from fastapi.middleware.cors import (
 )
 import logging
 
+# 5R/Rawat insiden 2026-10-12: audit DELETE + kunci 409 wajib terlihat
+# di log proses (tanpa ini logger.info app tenggelam — root tanpa handler).
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s %(name)s: %(message)s",
+)
+
 logger = logging.getLogger(__name__)
 
 from app.api.classification import (

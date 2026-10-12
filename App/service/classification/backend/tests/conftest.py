@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+
+# 5R/Resik insiden 2026-10-12: pytest JANGAN PERNAH menyentuh folder
+# data asli. Set env SEBELUM import app (root dibaca saat import).
+_tmp_data = Path(tempfile.mkdtemp(prefix="classif-test-"))
+os.environ.setdefault(
+    "CLASSIFICATION_INPUT_DIR",
+    str(_tmp_data / "classification-input"),
+)
+os.environ.setdefault(
+    "CLASSIFICATION_NORMALIZED_DIR",
+    str(_tmp_data / "classification-normalized"),
+)
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 if str(BACKEND_ROOT) not in sys.path:
