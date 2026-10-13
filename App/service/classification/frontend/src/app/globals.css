@@ -566,6 +566,36 @@ h2 {
   .sim-dash { grid-template-columns: 1fr; }
 }
 
+/* Mathematical Evidence full-width: mengikuti lebar konten dashboard,
+   bukan viewport (di luar grid .sim-dash agar tak terpengaruh kolom). */
+.sim-math-full {
+  width: 100%;
+  min-width: 0;
+  margin-top: 1rem;
+}
+
+/* Grid Live Trend: 2 kolom desktop, 1 kolom mobile. */
+.sim-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Dropdown sensor tambahan & field manual: bounded scroll di desktop
+   agar Sensor Controls tidak mendorong layout saat dibuka. */
+@media (min-width: 901px) {
+  .sim-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .sim-charts { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 640px) {
   .sim-kpis { grid-template-columns: 1fr; }
 }

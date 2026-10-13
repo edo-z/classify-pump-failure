@@ -1,0 +1,150 @@
+{
+  "meta": {
+    "profile_id": "5000_lps",
+    "setpoint_freq": null,
+    "namespace": "sim-fixture-14",
+    "n_readings": 1
+  },
+  "last_reading": {
+    "motor_speed": 990.0,
+    "output_frequency": 39.0,
+    "motor_current": 200.0,
+    "motor_torque": 40.0,
+    "output_power": 100.0,
+    "hours_run": null,
+    "output_voltage": null,
+    "ambient_temperature": 30.0,
+    "control_board_temperature": 40.0,
+    "inverter_temperature": 45.0,
+    "input_voltage": 340.0,
+    "flux_actual": null,
+    "motor_estimated_temperature": null,
+    "arus_rms_u": 100.0,
+    "arus_rms_v": 100.0,
+    "arus_rms_w": 140.0,
+    "timestamp": "2026-10-13T12:00:00+00:00"
+  },
+  "response": {
+    "profile_id": "5000_lps",
+    "namespace": "sim-fixture-14",
+    "rules_version": "1.1",
+    "evidence_size": 1,
+    "classification": {
+      "pump_id": 5000,
+      "timestamp": "2026-10-13T12:00:00Z",
+      "trouble_type": "unbalance",
+      "matched_rules": [
+        {
+          "trouble_type": "unbalance",
+          "matched_conditions": [
+            "unbalance OR: Eu 13.33% TRUE, Ev 13.33% TRUE, Ew -19.05% TRUE >= 10.00% (Ri 113.33)"
+          ],
+          "total_conditions": 1
+        },
+        {
+          "trouble_type": "undervoltage",
+          "matched_conditions": [
+            "input_voltage 340.00 < 360.00"
+          ],
+          "total_conditions": 1
+        }
+      ],
+      "sensor_snapshot": {
+        "output_frequency": 39.0,
+        "output_power": 100.0,
+        "motor_current": 200.0,
+        "motor_torque": 40.0,
+        "motor_speed": 990.0,
+        "ambient_temperature": 30.0,
+        "control_board_temperature": 40.0,
+        "inverter_temperature": 45.0,
+        "input_voltage": 340.0
+      },
+      "readings_count": 1,
+      "limitations": [
+        "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=200.0)"
+      ],
+      "evaluation_status": "FULL",
+      "rule_evaluations": [
+        {
+          "trouble_type": "pompa_tersangkut_sampah",
+          "capability_status": "READY",
+          "evaluation": "NO_MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [
+            "speed=990.0 >= 100"
+          ],
+          "total_conditions": 5
+        },
+        {
+          "trouble_type": "turbulensi",
+          "capability_status": "READY",
+          "evaluation": "NO_MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [
+            "freq=39.0 < setpoint 40.0"
+          ],
+          "total_conditions": 4
+        },
+        {
+          "trouble_type": "banyak_sampah",
+          "capability_status": "READY",
+          "evaluation": "NO_MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [
+            "output_frequency=39.0 <= setpoint 40.0"
+          ],
+          "total_conditions": 4
+        },
+        {
+          "trouble_type": "dry_run",
+          "capability_status": "READY",
+          "evaluation": "NO_MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [
+            "DR_C: output_power=100.0 <= DR_kW 266.8 (0.667*400)",
+            "DR_C: motor_current=200.0 <= DR_A 554.9 (0.64*867)",
+            "DR_C: motor_torque=40.0 < 70"
+          ],
+          "total_conditions": 4
+        },
+        {
+          "trouble_type": "panel_overheat",
+          "capability_status": "READY",
+          "evaluation": "NO_MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [],
+          "total_conditions": 3
+        },
+        {
+          "trouble_type": "unbalance",
+          "capability_status": "READY",
+          "evaluation": "MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [
+            "unbalance OR: Eu 13.33% TRUE, Ev 13.33% TRUE, Ew -19.05% TRUE >= 10.00% (Ri 113.33)"
+          ],
+          "total_conditions": 1
+        },
+        {
+          "trouble_type": "undervoltage",
+          "capability_status": "READY",
+          "evaluation": "MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [
+            "input_voltage 340.00 < 360.00"
+          ],
+          "total_conditions": 1
+        },
+        {
+          "trouble_type": "overvoltage",
+          "capability_status": "READY",
+          "evaluation": "NO_MATCH",
+          "missing_requirements": [],
+          "matched_conditions": [],
+          "total_conditions": 1
+        }
+      ]
+    }
+  }
+}

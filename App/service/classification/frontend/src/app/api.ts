@@ -368,12 +368,25 @@ export type V1MatchedRule = {
   total_conditions: number;
 };
 
+// Type-only mirror of backend RuleEvaluation (ClassificationResult.rule_evaluations).
+// Runtime sudah dikirim /v1/classify; deklarasi ini hanya mengetikkannya.
+// evaluation null / capability != READY => NOT_EVALUABLE di lapisan presentasi.
+export type V1RuleEvaluation = {
+  trouble_type: string;
+  capability_status: "READY" | "SKIPPED" | "UNSUPPORTED";
+  evaluation: "MATCH" | "NO_MATCH" | null;
+  missing_requirements: string[];
+  matched_conditions: string[];
+  total_conditions: number;
+};
+
 export type V1Classification = {
   trouble_type: string;
   matched_rules: V1MatchedRule[];
   sensor_snapshot: Record<string, number | null>;
   limitations: string[];
   evaluation_status: string;
+  rule_evaluations: V1RuleEvaluation[];
 };
 
 export type V1ClassifyResult = {
@@ -405,3 +418,6 @@ export async function classifyWindow(
   }
   return response.json();
 }
+
+// E2 — Capabilities memakai bentuk inline pada TierRefs di atas.
+export type CapabilityRefs = TierRefs["capabilities"];

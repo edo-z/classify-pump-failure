@@ -1,23 +1,26 @@
 // 5R Simulasi Sensor — Automatic Variation + engine klasifikasi aktual.
 // Slider = TARGET sensor; engine menilai NILAI AKTUAL sintetis (target + noise).
 // Tanpa rumus diagnosis baru: semua vonis dari POST /v1/classify.
+//
+// Tanggung jawab file ini: session lifecycle + sampling clock + state.
+// Presentasi dipecah ke components/ (SensorControlsPanel, LiveTrendPanel,
+// ClassificationPanel, MathematicalEvidence). Formatter evidence di
+// evidence-format.ts. Tidak ada logika diagnosis di lapisan UI.
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import * as echarts from "echarts";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   classifyWindow,
-  type V1Classification,
+  getTierRefs,
+  type TierRefs,
   type V1Reading,
 } from "../api";
 import { FAILURE_COLORS } from "../lib/replay/constants";
 import {
   MANUAL_FIELDS,
   NOISE_SENSORS,
-  ampOptions,
   defaultAmps,
   defaultTargets,
-  type SimSensor,
 } from "./sensors";
 import {
   RESPONSE_ALPHA,
@@ -26,7 +29,13 @@ import {
   mulberry32,
   type ResponseMode,
 } from "./variation";
-import { FAILURE_MAP, FAILURE_OPTIONS, type FailureType } from "./failure-signals";
+import { FAILURE_MAP, type FailureType } from "./failure-signals";
+import { buildFocusedEvidence } from "./evidence-format";
+import MathematicalEvidence from "./components/MathematicalEvidence";
+import SensorControlsPanel from "./components/SensorControlsPanel";
+import LiveTrendPanel from "./components/LiveTrendPanel";
+import ClassificationPanel from "./components/ClassificationPanel";
+import type { SimResult, SimSnapshot } from "./types";
 
 type Phase = "idle" | "running" | "stopped";
 
@@ -37,21 +46,6 @@ const MAX_HISTORY = 60;
 const PROFILES = ["500_lps", "3000_lps", "5000_lps"] as const;
 const MODES: ResponseMode[] = ["halus", "normal", "cepat"];
 
-type SimSnapshot = {
-  seq: number;
-  time: string;
-  trouble: string;
-  actuals: Record<string, number | null>;
-  targets: Record<string, number | null>;
-};
-
-type SimResult = {
-  seq: number;
-  classification: V1Classification;
-  evidence: number;
-  rules: string;
-};
-
 function newSessionId(): string {
   try {
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -61,11 +55,6 @@ function newSessionId(): string {
     // abaikan, fallback di bawah
   }
   return `sim-${Date.now().toString(36)}`;
-}
-
-function fmt(value: number | null, decimals: number): string {
-  if (value === null || !Number.isFinite(value)) return "—";
-  return value.toFixed(decimals);
 }
 
 export default function SimulationPage() {
@@ -94,6 +83,9 @@ export default function SimulationPage() {
   const [result, setResult] = useState<SimResult | null>(null);
   const [error, setError] = useState("");
   const [selectedFailure, setSelectedFailure] = useState<FailureType>("dry_run");
+  // E2: referensi efektif runtime (/tier-refs). Null => fallback Jalur A
+  // (threshold FALSE tetap "—"). Fetch gagal tidak boleh mematikan simulasi.
+  const [tierRefs, setTierRefs] = useState<TierRefs | null>(null);
 
   const phaseRef = useRef<Phase>("idle");
   const sessionRef = useRef<string>("");
@@ -104,8 +96,6 @@ export default function SimulationPage() {
   const hoursBaseRef = useRef(0);
   const inFlightRef = useRef(false);
   const timerRef = useRef<number | null>(null);
-  const chartsInstRef = useRef<Record<string, echarts.ECharts>>({});
-  const resizeObsRef = useRef<ResizeObserver | null>(null);
 
 
   // 5R Stale-closure: interval clock memegang sendTick render pertama.
@@ -211,6 +201,8 @@ export default function SimulationPage() {
         classification: res.classification,
         evidence: res.evidence_size,
         rules: res.rules_version,
+        ruleEvaluations: res.classification.rule_evaluations ?? [],
+        reading,
       });
       const actuals: Record<string, number | null> = {};
       for (const s of NOISE_SENSORS) actuals[s.key] = (reading[s.key as keyof V1Reading] as number | null) ?? null;
@@ -299,150 +291,42 @@ export default function SimulationPage() {
   const SECONDARY_SENSORS = NOISE_SENSORS.filter((s) => !PRIMARY_KEYS.includes(s.key));
   const MANUAL_SENSORS = MANUAL_FIELDS;
 
-  const renderNoiseRow = (s: SimSensor) => {
-    return (
-      <div key={s.key} className="sim-row">
-        <label className="sim-enable">
-          <input
-            type="checkbox"
-            aria-label={`Aktif ${s.label}`}
-            checked={!!enabled[s.key]}
-            disabled={!running}
-            onChange={(e) => setEnabled((prev) => ({ ...prev, [s.key]: e.target.checked }))}
-          />
-        </label>
-        <div className="sim-row-main">
-          <div className="sim-label-group">
-            <span className="sim-label">{s.label}</span>
-            <span className="sim-unit">({s.unit})</span>
-          </div>
-          <div className="sim-control-group">
-            <input
-              type="range"
-              aria-label={`Target ${s.label}`}
-              min={s.min}
-              max={s.max}
-              step={s.step}
-              value={targets[s.key] ?? s.min}
-              disabled={!running || !enabled[s.key]}
-              onChange={(e) => setTargets((prev) => ({ ...prev, [s.key]: Number(e.target.value) }))}
-              className="sim-slider"
-            />
-            <input
-              type="number"
-              aria-label={`Angka ${s.label}`}
-              step={s.step}
-              value={targets[s.key] ?? ""}
-              disabled={!running || !enabled[s.key]}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (Number.isFinite(v)) setTargets((prev) => ({ ...prev, [s.key]: v }));
-              }}
-              className="sim-number"
-            />
-          </div>
-        </div>
-        <select
-          aria-label={`Amplitudo ${s.label}`}
-          value={amps[s.key] ?? 0}
-          disabled={!running || !enabled[s.key]}
-          onChange={(e) => setAmps((prev) => ({ ...prev, [s.key]: Number(e.target.value) }))}
-          className="sim-amp"
-        >
-          {ampOptions(s).map((a) => (
-            <option key={a} value={a}>{a === 0 ? "noise 0" : `±${a}${s.ampUnit}`}</option>
-          ))}
-        </select>
-        <span data-testid={`actual-${s.key}`} className="sim-actual">
-          {lastSnap ? fmt(lastSnap.actuals[s.key] ?? null, s.decimals) : "—"} {s.unit}
-        </span>
-      </div>
-    );
-  };
-
   useEffect(() => {
-    const handleResize = () => {
-      Object.values(chartsInstRef.current).forEach(inst => inst.resize());
-    };
-    window.addEventListener("resize", handleResize);
-    // Panel chart bisa berubah ukuran tanpa window resize (ganti failure,
-    // buka/tutup details, reflow grid): amati tiap container chart.
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const key = (entry.target as HTMLElement).dataset.chartKey;
-        const inst = key ? chartsInstRef.current[key] : undefined;
-        if (inst && !inst.isDisposed()) inst.resize();
-      }
-    });
-    resizeObsRef.current = ro;
+    let cancelled = false;
+    getTierRefs()
+      .then((refs) => { if (!cancelled) setTierRefs(refs); })
+      .catch(() => { /* refs opsional: formatter fallback ke Jalur A */ });
     return () => {
+      cancelled = true;
       stopTimer();
-      window.removeEventListener("resize", handleResize);
-      ro.disconnect();
-      resizeObsRef.current = null;
-      Object.values(chartsInstRef.current).forEach(inst => inst.dispose());
-      chartsInstRef.current = {};
     };
   }, []);
 
 
-  // Multi-chart: Target vs Aktual untuk semua sensor relevan failure.
-  // Dispose instance failure lama agar tidak ada chart hantu saat ganti failure.
-  useEffect(() => {
-    const sensors = FAILURE_MAP[selectedFailure].sensors;
-    const active: Set<string> = new Set<string>(sensors);
-    for (const key of Object.keys(chartsInstRef.current)) {
-      if (!active.has(key)) {
-        const staleEl = document.getElementById(`chart-${key}`);
-        if (staleEl) resizeObsRef.current?.unobserve(staleEl);
-        chartsInstRef.current[key].dispose();
-        delete chartsInstRef.current[key];
-      }
-    }
-    sensors.forEach(key => {
-      const el = document.getElementById(`chart-${key}`);
-      if (!el) return;
-      resizeObsRef.current?.observe(el);
-
-      if (!chartsInstRef.current[key]) {
-        chartsInstRef.current[key] = echarts.init(el);
-      }
-      const inst = chartsInstRef.current[key];
-      const sig = NOISE_SENSORS.find((s) => s.key === key);
-      const xs = snapshots.map((s) => `#${s.seq}`);
-      const tgt = snapshots.map((s) => s.targets[key] ?? null);
-      const act = snapshots.map((s) => s.actuals[key] ?? null);
-      
-      inst.setOption({
-        animation: false,
-        grid: { left: 44, right: 12, top: 20, bottom: 28 },
-        tooltip: { trigger: "axis" },
-        xAxis: { type: "category", data: xs },
-        yAxis: { type: "value", scale: true },
-        series: [
-          { name: `Target${sig ? ` (${sig.unit})` : ""}`, type: "line", data: tgt, lineStyle: { type: "dashed", color: "#9ca3af" }, itemStyle: { color: "#9ca3af" }, symbol: "none" },
-          { name: "Aktual", type: "line", data: act, lineStyle: { color: "#2563eb" }, itemStyle: { color: "#2563eb" }, symbol: "circle", symbolSize: 5 },
-        ],
-      }, true);
-    });
-  }, [snapshots, selectedFailure]);
-
   const lastSnap = snapshots.length ? snapshots[snapshots.length - 1] : null;
   const trouble = result?.classification.trouble_type ?? "—";
   const troubleColor = (FAILURE_COLORS as Record<string, string>)[trouble] ?? "#6b7280";
-  // Monitoring = filter tampilan, bukan injeksi diagnosis: bandingkan langsung
-  // trouble_type kanonis, bukan via label. Semua matched_rules tetap ditampilkan.
-  // Classifier bisa cocok beberapa gangguan sekaligus (trouble_type hanya salah
-  // satunya), jadi badge menilai keberadaan failure di matched_rules.
-  const isMonitoringMatch =
-    !!result &&
-    result.classification.matched_rules.some((r) => r.trouble_type === selectedFailure);
-  const orderedRules = result
-    ? [
-        ...result.classification.matched_rules.filter((r) => r.trouble_type === selectedFailure),
-        ...result.classification.matched_rules.filter((r) => r.trouble_type !== selectedFailure),
-      ]
-    : [];
+
+  // F8.5 — Evidence fokus dibaca dari paket atomik (ruleEvaluations + reading
+  // seq yang sama dengan grafik & KPI). Ganti failure hanya memilih fokus lain
+  // dari hasil tersimpan; tidak memicu fetch, tidak mereset state.
+  const focusedView = useMemo(() => {
+    if (!result) return null;
+    return buildFocusedEvidence({
+      failureType: selectedFailure,
+      ruleEvaluations: result.ruleEvaluations,
+      snapshot: result.classification.sensor_snapshot ?? {},
+      lastReading: result.reading as unknown as Record<string, number | null>,
+      limitations: result.classification.limitations ?? [],
+      sampleSeq: result.seq,
+      timestamp: result.reading.timestamp,
+      rulesVersion: result.rules,
+      evaluationStatus: result.classification.evaluation_status,
+      globalTrouble: result.classification.trouble_type,
+      refs: tierRefs,
+      profileId,
+    });
+  }, [result, selectedFailure, tierRefs, profileId]);
 
   return (
     <main>
@@ -548,160 +432,36 @@ export default function SimulationPage() {
         {error && <p className="message" role="alert">{error}</p>}
 
         <div className="sim-dash">
-            <div className="sim-panel">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "1rem", flexWrap: "wrap" }}>
-                <h2 style={{ margin: 0 }}>Sensor Controls — {FAILURE_MAP[selectedFailure].label} · <span data-testid="sim-primary-count">{PRIMARY_SENSORS.length} sensor</span> {running ? "" : "(aktif setelah Start)"}</h2>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Monitoring</label>
-                  <select 
-                    aria-label="Failure Monitoring" 
-                    data-testid="sim-failure-select"
-                    value={selectedFailure} 
-                    onChange={(e) => setSelectedFailure(e.target.value as FailureType)}
-                    style={{ padding: "0.4rem", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "0.85rem" }}
-                  >
-                    {FAILURE_OPTIONS.map(opt => (
-                      <option key={opt.id} value={opt.id}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="sim-grid">
-                {PRIMARY_SENSORS.map(renderNoiseRow)}
-              </div>
-              <details className="sim-details">
-                <summary>+ {SECONDARY_SENSORS.length} sensor lainnya</summary>
-                <div className="sim-grid" style={{ marginTop: "0.5rem" }}>
-                  {SECONDARY_SENSORS.map(renderNoiseRow)}
-                </div>
-              </details>
-              <details className="sim-details">
-                <summary>Pengaturan lanjutan (field manual)</summary>
-                <div className="sim-grid" style={{ marginTop: "0.5rem" }}>
-                  {MANUAL_SENSORS.map((m) => (
-                    <div key={m.key} className="sim-row">
-                      <label className="sim-enable">
-                        <input
-                          type="checkbox"
-                          aria-label={`Aktif ${m.label}`}
-                          checked={!!enabled[m.key]}
-                          disabled={!running}
-                          onChange={(e) => setEnabled((prev) => ({ ...prev, [m.key]: e.target.checked }))}
-                        />
-                      </label>
-                      <span className="sim-label">{m.label} <small>({m.unit}{m.accumulate ? ", akumulatif" : ""})</small></span>
-                      <span />
-                      <input
-                        type="number"
-                        aria-label={`Angka ${m.label}`}
-                        step={m.step}
-                        placeholder="null"
-                        value={manuals[m.key] ?? ""}
-                        disabled={!running || !enabled[m.key]}
-                        onChange={(e) => setManuals((prev) => ({ ...prev, [m.key]: e.target.value }))}
-                        className="sim-number"
-                      />
-                      <span />
-                      <span data-testid={`actual-${m.key}`} className="sim-actual">
-                        {lastSnap ? fmt(lastSnap.actuals[m.key] ?? null, 1) : "—"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </details>
-            </div>
+          <SensorControlsPanel
+            running={running}
+            selectedFailure={selectedFailure}
+            onSelectFailure={(f) => setSelectedFailure(f)}
+            primarySensors={PRIMARY_SENSORS}
+            secondarySensors={SECONDARY_SENSORS}
+            manualSensors={MANUAL_SENSORS}
+            targets={targets}
+            amps={amps}
+            enabled={enabled}
+            manuals={manuals}
+            lastActuals={lastSnap ? lastSnap.actuals : null}
+            onToggleEnabled={(key, v) => setEnabled((prev) => ({ ...prev, [key]: v }))}
+            onTargetChange={(key, v) => setTargets((prev) => ({ ...prev, [key]: v }))}
+            onAmpChange={(key, v) => setAmps((prev) => ({ ...prev, [key]: v }))}
+            onManualChange={(key, v) => setManuals((prev) => ({ ...prev, [key]: v }))}
+          />
 
           <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
-            <div className="sim-panel">
-              <h2 style={{ marginTop: 0 }}>Live Trend — Target vs Aktual</h2>
-              <div style={{ 
-                display: "grid", 
-                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", 
-                gap: "1rem", 
-                marginTop: "1rem" 
-              }}>
-                {FAILURE_MAP[selectedFailure].sensors.map(key => {
-                  const sig = NOISE_SENSORS.find(s => s.key === key);
-                  return (
-                    <div key={key} data-testid={`sim-chart-${key}`} style={{ background: "#f9fafb", padding: "0.75rem", borderRadius: "8px", border: "1px solid #e5e7eb", minWidth: 0 }}>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 600, marginBottom: "0.5rem", display: "flex", justifyContent: "space-between" }}>
-                        <span>{sig?.label || key}</span>
-                        <span style={{ color: "#6b7280" }}>{sig?.unit || ""}</span>
-                      </div>
-                      <div id={`chart-${key}`} data-chart-key={key} style={{ width: "100%", height: "160px" }} />
-                    </div>
-                  );
-                })}
-              </div>
-              {snapshots.length === 0 && (
-                <p style={{
-                  color: "#9ca3af", fontSize: "0.9rem",
-                  fontStyle: "italic", margin: "0.75rem 0 0"
-                }}>
-                  Grafik tampil setelah Start
-                </p>
-              )}
-            </div>
-            <div className="sim-panel" data-testid="sim-result">
-              <h2 style={{ marginTop: 0 }}>Classification &amp; Evidence</h2>
-              <p style={{ fontSize: "0.78rem", color: "#6b7280", margin: "0 0 0.5rem" }}>
-                Monitoring = filter tampilan, bukan injeksi diagnosis. Engine menilai semua gangguan.
-              </p>
-               {!result && <p>Belum ada hasil klasifikasi. Ketika simulasi berjalan, gangguan yang cocok dan ringkasan penyebabnya tampil di sini.</p>}
-               {result && (
-                 <div>
-                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                     <span data-testid="sim-trouble" className="sim-trouble" style={{ background: troubleColor }}>
-                       {trouble}
-                     </span>{" "}
-                     <span data-testid="sim-seq" style={{ fontSize: "0.78rem", color: "#6b7280" }}>
-                       (sampel #{result.seq})
-                     </span>
-                      {isMonitoringMatch && (
-                        <span data-testid="sim-match-badge" style={{ fontSize: "0.7rem", background: "#dcfce7", color: "#166534", padding: "0.1rem 0.4rem", borderRadius: "4px", fontWeight: 600, border: "1px solid #bbf7d0" }}>
-                          ✓ Cocok dengan Monitoring
-                        </span>
-                      )}
-                   </div>
-                    <details className="sim-details" style={{ marginTop: "0.5rem" }}>
-                      <summary>
-                        Detail evidence ({result.classification.matched_rules.length} kondisi cocok
-                        {result.classification.limitations.length ? `, ${result.classification.limitations.length} keterbatasan` : ""})
-                      </summary>
-                      {orderedRules.length > 0 && (
-                        <ul data-testid="sim-matched-list">
-                          {orderedRules.map((r) => (
-                            <li key={r.trouble_type} style={r.trouble_type === selectedFailure ? { borderLeft: "3px solid #2563eb", paddingLeft: "0.5rem" } : undefined}>
-                              <strong>{r.trouble_type}</strong>
-                              <ul>
-                                {r.matched_conditions.map((c) => (
-                                  <li key={c}><code>{c}</code></li>
-                                ))}
-                              </ul>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {result.classification.limitations.length > 0 && (
-                        <div data-testid="sim-limitations">
-                          <strong>Keterbatasan:</strong>
-                          <ul>
-                            {result.classification.limitations.map((l) => (
-                              <li key={l}><code>{l}</code></li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      <p style={{ fontSize: "0.78rem", color: "#6b7280" }}>
-                        evidence {result.evidence} • rules {result.rules} • status {result.classification.evaluation_status}
-                      </p>
-                    </details>
-                </div>
-              )}
-            </div>
+            <LiveTrendPanel sensorKeys={failureSensors} snapshots={snapshots} />
+            <ClassificationPanel result={result} selectedFailure={selectedFailure} />
           </div>
         </div>
-      </div>
+
+        <section className="sim-panel sim-math-full" data-testid="sim-math-full">
+              <h2 style={{ marginTop: 0 }}>Mathematical Evidence</h2>
+              {!focusedView && <p>Belum ada hasil klasifikasi. Panel perhitungan failure yang dimonitoring tampil di sini setelah Start, mengikuti sampel yang sama dengan grafik dan KPI.</p>}
+              {focusedView && <MathematicalEvidence view={focusedView} />}
+        </section>
+        </div>
     </main>
   );
 }

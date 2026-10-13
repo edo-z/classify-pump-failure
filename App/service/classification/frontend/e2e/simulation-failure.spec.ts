@@ -165,4 +165,19 @@ test.describe("Failure-based simulation", () => {
     });
     await expect(page.getByTestId("sim-match-badge")).toBeVisible();
   });
+
+  test("P1 input: target di-clamp ke rentang, amplitudo dibatasi ampMax", async ({
+    page,
+  }) => {
+    test.setTimeout(120000);
+    await page.getByRole("button", { name: "Start Simulation" }).click();
+    await expect(page.getByTestId("sim-seq")).toContainText("#1", {
+      timeout: 15000,
+    });
+    await page.getByTestId("sim-failure-select").selectOption("undervoltage");
+    await page.getByLabel("Angka Input Voltage").fill("500");
+    await expect(page.getByLabel("Angka Input Voltage")).toHaveValue("450");
+    await page.getByLabel("Amplitudo Input Voltage").fill("99");
+    await expect(page.getByLabel("Amplitudo Input Voltage")).toHaveValue("2");
+  });
 });
