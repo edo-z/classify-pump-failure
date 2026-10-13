@@ -22,7 +22,7 @@ export type SimSensor = {
   ampUnit: string;
 };
 
-export const NOISE_SENSORS: SimSensor[] = [
+export const NOISE_SENSORS = [
   { key: "input_voltage", label: "Input Voltage", unit: "V", min: 300, max: 450, step: 0.5, decimals: 1, defaultTarget: 380, noise: "pct", ampDefault: 0.5, ampMax: 2, ampUnit: "%" },
   { key: "output_frequency", label: "Output Frequency", unit: "Hz", min: 0, max: 55, step: 0.1, decimals: 1, defaultTarget: (f) => +(f - 1).toFixed(1), noise: "abs", ampDefault: 0, ampMax: 0.5, ampUnit: "Hz" },
   { key: "motor_current", label: "Motor Current", unit: "A", min: 0, max: 1000, step: 1, decimals: 1, defaultTarget: 246, noise: "pct", ampDefault: 1, ampMax: 5, ampUnit: "%" },
@@ -35,7 +35,10 @@ export const NOISE_SENSORS: SimSensor[] = [
   { key: "ambient_temperature", label: "Ambient Temp", unit: "°C", min: 0, max: 100, step: 0.1, decimals: 1, defaultTarget: 30, noise: "abs", ampDefault: 0.2, ampMax: 1, ampUnit: "°C" },
   { key: "control_board_temperature", label: "Control Board Temp", unit: "°C", min: 0, max: 100, step: 0.1, decimals: 1, defaultTarget: 40, noise: "abs", ampDefault: 0.3, ampMax: 2, ampUnit: "°C" },
   { key: "inverter_temperature", label: "Inverter Temp", unit: "°C", min: 0, max: 100, step: 0.1, decimals: 1, defaultTarget: 45, noise: "abs", ampDefault: 0.3, ampMax: 2, ampUnit: "°C" },
-];
+] as const satisfies readonly SimSensor[];
+
+/** Kunci sensor kanonis — satu sumber kebenaran untuk FAILURE_MAP. */
+export type SensorKey = (typeof NOISE_SENSORS)[number]["key"];
 
 export type ManualField = {
   key: string;

@@ -545,6 +545,7 @@ h2 {
   border-radius: 12px;
   padding: 0.9rem 1rem;
   min-width: 0;
+  position: relative;
 }
 
 .sim-details { margin-top: 0.75rem; }
@@ -569,27 +570,10 @@ h2 {
   .sim-kpis { grid-template-columns: 1fr; }
 }
 
-/* 5R Simulasi — badge, grid sensor, monitor. Prefix sim- agar tak bocor. */
-.sim-badge {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #92400e;
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 999px;
-  padding: 0.15rem 0.65rem;
-  white-space: nowrap;
-}
-
-.sim-grid {
-  display: grid;
-  gap: 0.5rem;
-}
 
 .sim-row {
   display: grid;
-  grid-template-columns: auto minmax(100px, 150px) minmax(0, 1fr) 78px 92px minmax(70px, auto);
+  grid-template-columns: auto 1fr 92px minmax(70px, auto);
   gap: 0.5rem;
   align-items: center;
   padding: 0.45rem 0.6rem;
@@ -599,28 +583,42 @@ h2 {
   min-width: 0;
 }
 
-.sim-row > * {
+.sim-row-main {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 0.75rem;
+  align-items: center;
   min-width: 0;
 }
 
-.sim-enable input {
-  width: 1rem;
-  height: 1rem;
-  accent-color: #2563eb;
+.sim-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .sim-label {
   font-size: 0.82rem;
+  font-weight: 600;
   color: #111827;
 }
 
-.sim-label small {
+.sim-unit {
+  font-size: 0.7rem;
   color: #6b7280;
+}
+
+.sim-control-group {
+  display: grid;
+  grid-template-columns: 1fr 70px;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .sim-slider {
   width: 100%;
   accent-color: #2563eb;
+  cursor: pointer;
 }
 
 .sim-number {
@@ -630,6 +628,7 @@ h2 {
   font: inherit;
   font-size: 0.82rem;
   width: 100%;
+  text-align: right;
 }
 
 .sim-amp {
@@ -643,45 +642,62 @@ h2 {
 
 .sim-actual {
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #1d4ed8;
   white-space: nowrap;
   text-align: right;
 }
 
-.sim-trouble {
-  display: inline-block;
-  color: white;
-  font-weight: 700;
-  font-size: 0.95rem;
-  border-radius: 10px;
-  padding: 0.35rem 0.9rem;
-}
-
-.sim-history {
+.sim-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.6rem;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.sim-hist {
-  font-size: 0.7rem;
+.sim-toolbar .top-controls-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  background: #f9fafb;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.sim-toolbar .top-controls-row button {
   font-weight: 600;
-  color: white;
-  border-radius: 999px;
-  padding: 0.1rem 0.55rem;
+}
+
+.sim-settings summary {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.sim-sessionline {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 0.4rem;
 }
 
 @media (max-width: 640px) {
   .sim-row {
     grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+  .sim-row-main {
+    grid-template-columns: 1fr;
     gap: 0.4rem;
+  }
+  .sim-control-group {
+    grid-template-columns: 1fr;
   }
   .sim-actual {
     text-align: left;
+    font-weight: 700;
   }
 }
+
+
 
 .upload-box {
   display: flex;

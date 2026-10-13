@@ -36,6 +36,8 @@ test.describe("Simulasi Sensor", () => {
     await expect(page.getByTestId("sim-seq")).toContainText("#1", {
       timeout: 15000,
     });
+    // Failure-based UI: Input Voltage primer saat monitoring undervoltage.
+    await page.getByTestId("sim-failure-select").selectOption("undervoltage");
     await page.getByLabel("Angka Input Voltage").fill("340");
     // 340 ± 0.5% selalu di bawah 360 -> engine nyata wajib undervoltage.
     await expect(page.getByTestId("sim-trouble")).toContainText(
