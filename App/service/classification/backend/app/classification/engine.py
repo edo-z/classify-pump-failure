@@ -12,6 +12,10 @@ RULES_FILE = (
 )
 
 from app.classification import engine_support as support
+from app.classification.configuration_resolver import (
+    EffectiveRefs,
+    apply_effective_refs,
+)
 from app.classification.evaluator import (
     evaluate_panel,
     evaluate_tier_rules,
@@ -138,7 +142,16 @@ class RulesEngine:
         pump_config: PumpConfig,
         operating_setpoint: OperatingSetpoint | None = None,
         trigger_namespace: str = "",
+        rule_config: EffectiveRefs | None = None,
     ) -> ClassificationResult:
+        """Classify one evidence window.
+
+        rule_config (Fase 2, opsional): reference power/current efektif
+        per evaluasi. None = perilaku lama persis (nilai rules.json).
+        Bila diisi, tier rules disalin per panggilan dan refs-nya
+        ditimpa — self._rules global tidak pernah dimutasi sehingga
+        config satu pompa tidak bocor ke pompa lain.
+        """
         if not readings:
             raise ValueError(
                 "Classification requires at least one reading"
@@ -164,6 +177,12 @@ class RulesEngine:
             .get("tiers", {})
             .get(tier_key, {})
         )
+
+        if rule_config is not None and tier_rules:
+            tier_rules = apply_effective_refs(
+                tier_rules,
+                rule_config,
+            )
 
         rules_match: list[
             MatchedRule

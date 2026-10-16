@@ -48,7 +48,7 @@
             "unit": "%"
           },
           "rpm": {
-            "operator": "<",
+            "operator": ">=",
             "value": 100
           }
         },
@@ -135,7 +135,7 @@
             "unit": "%"
           },
           "rpm": {
-            "operator": "<",
+            "operator": ">=",
             "value": 100
           }
         },
@@ -222,7 +222,7 @@
             "unit": "%"
           },
           "rpm": {
-            "operator": "<",
+            "operator": ">=",
             "value": 100
           }
         },

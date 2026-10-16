@@ -109,19 +109,14 @@ def resolve_effective_setpoint(
     Prioritas: override_freq (per-analisis/dokumen) > profil.
     Nilai <=0 / None / invalid diabaikan ke level berikutnya.
     Mengembalikan OperatingSetpoint (rpm/torque selalu dari profil).
+
+    Lapisan fallback didelegasikan ke configuration_resolver agar
+    identik dengan resolver DB Fase 2 (tanpa I/O di sini).
     """
+    from app.classification.configuration_resolver import (
+        resolve_layered_value,
+    )
     from app.classification.models import OperatingSetpoint
-
-    def _clean(v) -> float | None:
-        try:
-            f = float(v) if v is not None else None
-        except (TypeError, ValueError):
-            return None
-        if f is None or f <= 0:
-            return None
-        return f
-
-    override_f = _clean(override_freq)
 
     try:
         profile_sp = get_profile_setpoint(profile_id)
@@ -129,5 +124,5 @@ def resolve_effective_setpoint(
         logger.warning("resolve setpoint profile load failed %s: %s", profile_id, exc)
         raise
 
-    freq = override_f if override_f is not None else profile_sp.frequency_hz
+    freq = resolve_layered_value(override_freq, profile_sp.frequency_hz)
     return OperatingSetpoint(frequency=freq, rpm=profile_sp.rpm, torque=profile_sp.torque)

@@ -10,3 +10,6 @@ __pycache__/
 .env
 Neo4j.txt
 Nvidia.txt
+
+# Dump struktur production (rujukan lokal saja, bukan artefak repo)
+Data/db-mysql/dexpump/

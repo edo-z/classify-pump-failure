@@ -56,19 +56,30 @@ def evaluate_tier_rules(
             # ref dinamis dari tier POMPA yang sama
             kw_ref = None
             amp_ref = None
+            ref_torque = 110.0
+            ref_rpm = 100.0
+            ref_freq = 10.0
             for c in rule_def.get("conditions", []):
                 if c.get("field") == "output_power":
                     kw_ref = c.get("value")
                 elif c.get("field") == "motor_current":
                     amp_ref = c.get("value")
+                else:
+                    try:
+                        override = float(c.get("value"))
+                    except (TypeError, ValueError):
+                        continue
+                    if c.get("field") == "motor_torque":
+                        ref_torque = override
+                    elif c.get("field") == "motor_speed":
+                        ref_rpm = override
+                    elif c.get("field") == "output_frequency":
+                        ref_freq = override
             # fallback ke tier jika tidak ada (seharusnya ada)
             if kw_ref is None:
                 kw_ref = 75
             if amp_ref is None:
                 amp_ref = 157
-            ref_torque = 110
-            ref_rpm = 100
-            ref_freq = 10
             freq = getattr(last, "output_frequency", None) if last else None
             kw = getattr(last, "output_power", None) if last else None
             amp = getattr(last, "motor_current", None) if last else None
@@ -83,15 +94,15 @@ def evaluate_tier_rules(
             matched = bool(pts_f and pts_count >= 3)
             matched_conds = []
             if pts_f:
-                matched_conds.append(f"freq={freq:.1f} <=10")
+                matched_conds.append(f"freq={freq:.1f} <={ref_freq:g}")
             if pts_kw:
                 matched_conds.append(f"power={kw:.1f} >= {kw_ref}")
             if pts_a:
                 matched_conds.append(f"current={amp:.1f} >= {amp_ref}")
             if pts_t:
-                matched_conds.append(f"torque={torque:.1f} >= 110%")
+                matched_conds.append(f"torque={torque:.1f} >= {ref_torque:g}%")
             if pts_rpm:
-                matched_conds.append(f"speed={rpm:.1f} >= 100")
+                matched_conds.append(f"speed={rpm:.1f} >= {ref_rpm:g}")
             total = 5
             _missing_setpoint = False
         elif trouble_name in ("LOW_WATER_MENYALA", "DRY_RUN"):
@@ -120,6 +131,15 @@ def evaluate_tier_rules(
             except Exception:
                 dr_kw = 0
                 dr_amp = 0
+            # Threshold torque dari rule_def (default 70, milik rules.json).
+            dr_t = 70.0
+            for c in rule_def.get("conditions", []):
+                if c.get("field") == "motor_torque":
+                    try:
+                        dr_t = float(c.get("value"))
+                    except (TypeError, ValueError):
+                        pass
+                    break
             # Dua tingkat, tanpa MEAN — per-sample terakhir, spesifikasi murni:
             # DryRun = DR_F ∧ DR_C, DR_C = DR_KW ∧ DR_A ∧ DR_T.
             # DR_F = kesetaraan raw 2 desimal (tanpa normalisasi).
@@ -147,8 +167,8 @@ def evaluate_tier_rules(
                 matched_conds.append(f"DR_C: output_power={actual_kw:.1f} <= DR_kW {dr_kw:.1f} (0.667*{kw_ref})")
             if actual_amp is not None and actual_amp <= dr_amp:
                 matched_conds.append(f"DR_C: motor_current={actual_amp:.1f} <= DR_A {dr_amp:.1f} (0.64*{amp_ref})")
-            if actual_torque is not None and actual_torque < 70:
-                matched_conds.append(f"DR_C: motor_torque={actual_torque:.1f} < 70")
+            if actual_torque is not None and actual_torque < dr_t:
+                matched_conds.append(f"DR_C: motor_torque={actual_torque:.1f} < {dr_t:g}")
             total = 4
             matched = bool(dr_f_armed and len(matched_conds) == 4)
             _missing_setpoint = False
