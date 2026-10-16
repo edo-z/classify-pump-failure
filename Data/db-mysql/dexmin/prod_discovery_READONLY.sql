@@ -39,20 +39,39 @@ SELECT type_flowhead,
 -- parameter, BUKAN histori perubahan — LAG(updated_at) tidak valid di
 -- sini. Query ini hanya menjawab: seberapa baru data terakhir dan
 -- seberapa lengkap parameter per pompa.
+-- KOREKSI 2: bila ada baris historis ganda per parameter, agregat WAJIB
+-- di atas SATU baris terbaru per (pump, parameter) — CTE `latest`
+-- (ROW_NUMBER, didukung 8.0 & 8.4). Tanpa ini MIN/MAX mencampur histori
+-- dengan snapshot kini. Cerminan logika reader worker (latest-per-key).
 -- Cadence SEBENARNYA diukur dengan Q3b (baca ulang + bandingkan).
 -- =====================================================================
+WITH latest AS (
+  SELECT pump_id, parameter_definition_id, value, updated_at
+    FROM (
+      SELECT pump_id, parameter_definition_id, value, updated_at,
+             ROW_NUMBER() OVER (
+               PARTITION BY pump_id, parameter_definition_id
+               ORDER BY updated_at DESC, id DESC
+             ) AS rn
+        FROM pump_realtimes
+    ) t
+   WHERE rn = 1
+)
 SELECT p.id AS pump_id,
-       COUNT(*) AS n_params,
-       MIN(pr.updated_at) AS oldest_param,
-       MAX(pr.updated_at) AS newest_param,
+       COUNT(l.parameter_definition_id) AS n_params,
+       MIN(l.updated_at) AS oldest_param,
+       MAX(l.updated_at) AS newest_param,
        TIMESTAMPDIFF(
-           SECOND, MIN(pr.updated_at), MAX(pr.updated_at)
+           SECOND, MIN(l.updated_at), MAX(l.updated_at)
        ) AS spread_seconds,
        TIMESTAMPDIFF(
-           SECOND, MAX(pr.updated_at), NOW()
-       ) AS staleness_seconds
+           SECOND, MAX(l.updated_at), NOW()
+       ) AS freshest_staleness_s,
+       TIMESTAMPDIFF(
+           SECOND, MIN(l.updated_at), NOW()
+       ) AS stalest_staleness_s
   FROM pumps p
-  LEFT JOIN pump_realtimes pr ON pr.pump_id = p.id
+  LEFT JOIN latest l ON l.pump_id = p.id
  GROUP BY p.id
  ORDER BY p.id;
 
@@ -112,17 +131,32 @@ SELECT p.id AS pump_id,
 --   UNDERVOLTAGE/OVERVOLTAGE: input_voltage.
 --   UNBALANCE: arus_rms_u/v/w.
 -- Segar belum berarti semua rule evaluable — cocokkan dengan daftar ini.
+--
+-- Agregat di atas CTE `latest` (satu baris terbaru per parameter):
+-- staleness_s = umur data TERBARU parameter tersebut (absolut vs NOW).
 -- =====================================================================
+WITH latest AS (
+  SELECT pump_id, parameter_definition_id, value, updated_at
+    FROM (
+      SELECT pump_id, parameter_definition_id, value, updated_at,
+             ROW_NUMBER() OVER (
+               PARTITION BY pump_id, parameter_definition_id
+               ORDER BY updated_at DESC, id DESC
+             ) AS rn
+        FROM pump_realtimes
+    ) t
+   WHERE rn = 1
+)
 SELECT p.id AS pump_id,
        pd.`key` AS param_key,
-       MAX(pr.updated_at) AS latest,
-       TIMESTAMPDIFF(SECOND, MAX(pr.updated_at), NOW()) AS staleness_s
+       MAX(l.updated_at) AS latest,
+       TIMESTAMPDIFF(SECOND, MAX(l.updated_at), NOW()) AS staleness_s
   FROM pumps p
   INNER JOIN flowheads fh ON fh.id = p.flowhead_id
   CROSS JOIN parameter_definitions pd
-  LEFT JOIN pump_realtimes pr
-    ON pr.pump_id = p.id
-   AND pr.parameter_definition_id = pd.id
+  LEFT JOIN latest l
+    ON l.pump_id = p.id
+   AND l.parameter_definition_id = pd.id
  WHERE pd.`key` IN (
        'motor_speed', 'rpm',
        'output_frequency', 'frequency', 'frekuensi',
@@ -139,19 +173,36 @@ SELECT p.id AS pump_id,
  ORDER BY p.id, pd.`key`;
 
 -- Q5b — ringkasan relatif per pompa: sebaran timestamp DALAM snapshot
--- (MAX-MIN antarparameter) + kebasi-an maksimum. Bandingkan spread
--- dengan batas freshness yang akan dipakai worker; bandingkan
--- max_staleness_s dengan NOW untuk absolut.
+-- (MAX-MIN antarparameter) + kebasi-an. Dibaca bersama:
+--   freshest_staleness_s = umur data PALING BARU (vs NOW).
+--   stalest_staleness_s  = umur data PALING BASI (vs NOW) — inilah
+--     "max" yang benar; versi lama memakai MAX(updated_at) sehingga
+--     justru menunjukkan umur data terbaru. Di atas CTE `latest`.
+-- Bandingkan spread dengan batas freshness worker.
+WITH latest AS (
+  SELECT pump_id, parameter_definition_id, value, updated_at
+    FROM (
+      SELECT pump_id, parameter_definition_id, value, updated_at,
+             ROW_NUMBER() OVER (
+               PARTITION BY pump_id, parameter_definition_id
+               ORDER BY updated_at DESC, id DESC
+             ) AS rn
+        FROM pump_realtimes
+    ) t
+   WHERE rn = 1
+)
 SELECT p.id AS pump_id,
-       COUNT(DISTINCT pr.parameter_definition_id) AS n_params_present,
-       MIN(pr.updated_at) AS oldest_param,
-       MAX(pr.updated_at) AS newest_param,
-       TIMESTAMPDIFF(SECOND, MIN(pr.updated_at), MAX(pr.updated_at))
+       COUNT(l.parameter_definition_id) AS n_params_present,
+       MIN(l.updated_at) AS oldest_param,
+       MAX(l.updated_at) AS newest_param,
+       TIMESTAMPDIFF(SECOND, MIN(l.updated_at), MAX(l.updated_at))
            AS spread_seconds,
-       TIMESTAMPDIFF(SECOND, MAX(pr.updated_at), NOW())
-           AS max_staleness_s
+       TIMESTAMPDIFF(SECOND, MAX(l.updated_at), NOW())
+           AS freshest_staleness_s,
+       TIMESTAMPDIFF(SECOND, MIN(l.updated_at), NOW())
+           AS stalest_staleness_s
   FROM pumps p
   INNER JOIN flowheads fh ON fh.id = p.flowhead_id
-  LEFT JOIN pump_realtimes pr ON pr.pump_id = p.id
+  LEFT JOIN latest l ON l.pump_id = p.id
  GROUP BY p.id
  ORDER BY p.id;

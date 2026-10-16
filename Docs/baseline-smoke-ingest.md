@@ -29,7 +29,7 @@ Identitas smoke: range ID `900012/900013` (worker menulis
 | Risiko | S | O | D | RPN | Kontrol yang terbukti |
 |---|---|---|---|---|---|
 | F4 dedup gagal | 7 | 2 | 4 | 56→**28** | satu sesi + asersi 36-tetap + alasan skip |
-| F2 fixture salah | 6 | 3 | 3 | 54→**27** | skenario A/B terkunci + asersi per-slug |
+| F2 fixture salah | 6 | 3 | 3 | 54→**27** | skenario A/B terkunci + asersi per-type |
 | F5 incomplete tak tercatat | 8 | 2 | 3 | 48→**24** | asersi `incomplete` + `missing_fields` |
 | F1 write bocor dry-run | 9 | 2 | 2 | 36→**18** | test anti-tulis + rollback + default SELECT-only |
 | F3 salah target DB | 9 | 1 | 4 | 36→**18** | gate `WRITE_ENABLED` + allowlist + stop-tanpa-hapus |
@@ -42,12 +42,23 @@ adalah smoke di atas, dengan izin sementara yang sudah dicabut
 ## 3. Delta schema resmi vs before
 
 Satu-satunya: `pumps.flowhead_id BIGINT UNSIGNED NULL` —
-dipertahankan RESMI (adendum `Data/db-mysql/dexmin/05_pump_flowhead_link.sql`).
-Alasan: dibutuhkan JOIN reader (`reader.py:52`), production `pumps`
-memilikinya, 0 baris saat diterapkan. Live akhir: 5 tabel migrasi,
-0 baris operasional, 9 seed kategori.
+dipertahankan RESMI. Alasan: dibutuhkan JOIN reader (`reader.py:52`),
+production `pumps` memilikinya, 0 baris saat diterapkan.
 
-## 4. Yang belum dibuktikan (blokir berikutnya)
+## 4. Squash direktori dexmin/ (2026-10-16, 5R ramping)
+
+Rantai bernomor `01–08` dilebur menjadi 4 file per-tabel tanpa nomor
+(`pumps`, `raw_classifications`, `pump_classifications`,
+`pump_classification_config`) + `prod_discovery_READONLY.sql` yang tak
+berubah. Isi = DDL final persis live (diambil via mysqldump, counter
+AUTO_INCREMENT dinormalisasi). Riwayat keputusan 01–08 abadi di git;
+yang dihapus hanya file kerja. Urutan apply: `pumps` dulu (target FK).
+Verifikasi: fresh scratch apply 4 file → kolom/tipe/nilai ENUM/
+nullability/collation/index/FK identik dengan live (via
+information_schema; satu perbedaan display kosmetik MySQL pada kolom
+ENUM — `CHARACTER SET` vs `COLLATE` — semantik sama, terverifikasi).
+
+## 5. Yang belum dibuktikan (blokir berikutnya)
 
 Klasifikasi atas telemetry operasional lapangan (butuh akses read-only
 8.4.x): discovery Q1–Q5, dry-run 1–2 pompa, MA/CMA 31-sampel penuh.

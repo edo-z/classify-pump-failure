@@ -51,7 +51,6 @@ class Worker:
         self.key_mapping = mapping_mod.load_key_mapping()
         self.tier_refs = load_tier_refs()
         self._engine = None
-        self._category_ids: dict[str, int] | None = None
 
     @property
     def engine(self):
@@ -70,8 +69,6 @@ class Worker:
         Proteksi utama tetap user DB hak SELECT saja; flag ini lapis
         aplikasi. Password tidak pernah dicatat di log/statistik.
         """
-        if self._category_ids is None:
-            self._category_ids = reader_mod.load_category_ids(conn)
         stats: dict[str, Any] = {
             "pumps_seen": 0,
             "pumps_evaluated": 0,
@@ -169,7 +166,6 @@ class Worker:
             },
             "provenance": provenance,
         }
-        assert self._category_ids is not None
         # Kelengkapan dari sampel yang benar-benar dievaluasi (terakhir).
         # Field hilang -> tick incomplete, normal tidak auto-TRUE.
         last = evidence[-1]
@@ -182,9 +178,7 @@ class Worker:
             sink_mod.build_rows(
                 result,
                 pump_id=snap.pump_id,
-                namespace=snap.namespace,
                 evaluated_at=evaluated_at,
-                category_ids=self._category_ids,
                 effective_config=effective_config,
                 missing_fields=missing,
             ),

@@ -62,25 +62,7 @@ def test_poll_once_write_path_requires_gate():
 
     worker = Worker(interval_seconds=5.0)
     conn = WritableFakeConn()
-    # Fake tanpa kategori -> load_category_ids KeyError? isi manual:
-    worker._category_ids = {
-        s: i + 1
-        for i, s in enumerate(
-            [
-                "pompa_tersangkut_sampah",
-                "turbulensi",
-                "banyak_sampah",
-                "unbalance",
-                "undervoltage",
-                "overvoltage",
-                "dry_run",
-                "panel_overheat",
-                "normal",
-            ]
-        )
-    }
-    # WritableFakeConn bukan koneksi MySQL: gate menolak karena
-    # WRITE_ENABLED tak diset — SEBELUM executemany tersentuh.
+    # Gate menolak karena WRITE_ENABLED tak diset — SEBELUM executemany.
     with pytest.raises(db_mod.WriteNotAllowedError):
         worker.poll_once(conn, dry_run=False)
     assert conn.written_rows == [] and conn.committed == 0

@@ -1,6 +1,6 @@
 """Kontrak --dry-run (validasi read-only production).
 
-  SELECT              -> DIIZINKAN (fake melayani 3 SELECT worker)
+  SELECT              -> DIIZINKAN (fake melayani 2 SELECT worker)
   klasifikasi         -> DIJALANKAN (engine asli)
   bangun 9 raw rows   -> DIJALANKAN (dihitung + dilaporkan)
   INSERT/UPDATE/DELETE/executemany-tulis/COMMIT -> DILARANG (raise)
@@ -14,18 +14,6 @@ menulis 9 baris + commit.
 from datetime import datetime, timezone
 
 from app.ingest_db.worker import Worker
-
-SLUGS = [
-    "pompa_tersangkut_sampah",
-    "turbulensi",
-    "banyak_sampah",
-    "unbalance",
-    "undervoltage",
-    "overvoltage",
-    "dry_run",
-    "panel_overheat",
-    "normal",
-]
 
 
 class WriteBlocked(AssertionError):
@@ -48,8 +36,6 @@ class FakeCursor:
         lowered = str(sql).lower()
         if "select database()" in lowered:
             self._rows = [{"db": "dryrun_5r"}]
-        elif "failure_categories" in lowered:
-            self._rows = [{"id": i + 1, "slug": s} for i, s in enumerate(SLUGS)]
         elif "from pumps" in lowered:
             now = datetime.now(timezone.utc)
             pairs = [

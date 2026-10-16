@@ -69,13 +69,6 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
-def load_category_ids(conn) -> dict[str, int]:
-    """slug failure_categories -> id (di-cache worker per proses)."""
-    with conn.cursor() as cur:
-        cur.execute("SELECT id, slug FROM failure_categories")
-        return {row["slug"]: int(row["id"]) for row in cur.fetchall()}
-
-
 def read_pump_snapshots(conn) -> list[PumpSnapshot]:
     with conn.cursor() as cur:
         cur.execute(_SNAPSHOT_SQL)
