@@ -392,7 +392,6 @@ export type ClassifyClassification = {
 export type ClassifyResult = {
   profile_id: string;
   namespace: string;
-  rules_version: string;
   evidence_size: number;
   classification: ClassifyClassification;
 };

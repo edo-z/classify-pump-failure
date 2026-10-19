@@ -109,13 +109,12 @@ eksplisit/teruji — bukan dengan mengubah engine.
 
 | Field | Aktual `/classify` | Target migrasi |
 |---|---|---|
-| envelope | `{profile_id, namespace, rules_version, evidence_size, classification}` | `{profile_id, namespace, classification}` |
+| envelope | `{profile_id, namespace, evidence_size, classification}` | `{profile_id, namespace, classification}` |
 | `classification.pump_id` | ada (= `capacity_lps`, mis. 5000) | **tidak ada** |
 | `classification.limitations` | ada | **tidak ada** |
 | `classification.evaluation_status` | ada | **tidak ada** |
 | `classification.rule_evaluations` | ada (8 entri) | **tidak ada** |
 | `classification.sensor_snapshot` | 9+ kunci | subset (mis. 4 kunci) |
-| `rules_version` | ada | **tidak ada** |
 | `evidence_size` | ada | **tidak ada** |
 | `matched_conditions` | string teknis (mis. `DR_C: output_power=...`) | label manusia |
 | `trouble_type`, `matched_rules[].trouble_type`, `.total_conditions`, `readings_count` | ada | sama |

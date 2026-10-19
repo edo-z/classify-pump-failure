@@ -111,7 +111,7 @@ upload 201 → normalize/telemetry/run/scan/setpoints 200 → delete 200
 | N3 | Cek operasional lama (`mqtt_connected`, mosquitto) | 5 | 3 | 3 | **45** | TERKENDALI 2026-10-10 (restart prod: `/health` publik `ok` tanpa key mqtt; docs/16 updated) |
 | N4 | Bookmark `/realtime` lama → 404 | 3 | 4 | 2 | **24** | DITERIMA (by design) |
 | N5 | Coverage E2E live hilang | 6 | 2 | 4 | **48** | DITERIMA (disengaja; batch + chat coverage tetap) |
-| N6 | CMA turbulensi: vonis dari histori tipis (false alarm naik) | 8 | 3 | 2 | **48** | TERKENDALI 2026-10-10 (rules 1.1; 5 uji CMA baru: CMA5/CMA1/boundary/zero-history + `ref_kind` di audit; contract test kunci `rules_version`) |
+| N6 | CMA turbulensi: vonis dari histori tipis (false alarm naik) | 8 | 3 | 2 | **48** | TERKENDALI 2026-10-10 (rules 1.1; 5 uji CMA baru: CMA5/CMA1/boundary/zero-history + `ref_kind` di audit; contract test kunci bentuk respons) |
 
 ## 6. Amendemen 2026-10-11 — ekspansi e2e agentic (tester-army/e2e, model 9router/hermes)
 

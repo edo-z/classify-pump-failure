@@ -27,7 +27,6 @@
   "response": {
     "profile_id": "5000_lps",
     "namespace": "sim-fixture-02",
-    "rules_version": "1.1",
     "evidence_size": 31,
     "classification": {
       "pump_id": 5000,

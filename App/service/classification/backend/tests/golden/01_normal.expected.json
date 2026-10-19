@@ -1,7 +1,6 @@
 {
   "profile_id": "5000_lps",
   "namespace": "golden-normal",
-  "rules_version": "1.1",
   "evidence_size": 1,
   "classification": {
     "pump_id": 5000,

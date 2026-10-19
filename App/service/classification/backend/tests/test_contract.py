@@ -1,6 +1,6 @@
 """C8 — Kontrak klasifikasi stabil untuk tim BE (apps/web, non-Python).
 
-Mengunci: bentuk request/response /classify, rules_version,
+Mengunci: bentuk request/response /classify,
 evidence trimming server-side, namespace isolation, dan gate API-key.
 """
 
@@ -46,7 +46,6 @@ def test_classify_happy_path_shape():
     body = r.json()
     assert body["profile_id"] == "5000_lps"
     assert body["namespace"] == "96"
-    assert body["rules_version"] == "1.1"
     assert body["evidence_size"] == 5
     cls = body["classification"]
     assert cls["trouble_type"] in (

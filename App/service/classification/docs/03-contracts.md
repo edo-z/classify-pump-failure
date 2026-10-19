@@ -5,8 +5,9 @@
 - **Tanpa prefix versi pada URL.** Satu jalur kanonis `POST /classify`; tidak
   ada `/v1`, `/v2`, dst. Bila kelak perlu perubahan breaking, tambahkan versi
   secara eksplisit saat itu juga, bukan sekarang.
-- **`rules_version` bukan versi API.** Field respons `rules_version` (mis.
-  `"1.1"`) menandai versi berkas aturan `rules.json`, bukan versi endpoint.
+- **Tanpa versi aturan di respons.** Envelope `/classify` **tidak** membawa
+  `rules_version`; versi `rules.json` tetap metadata internal dan tak
+  diekspos lewat API. Perubahan aturan dikomunikasikan lewat catatan rilis.
 - **Nama tipe** memakai prefiks domain `Classify*` (mis. `ClassifyRequest`,
   `ClassifyResponse`, `ClassifyReading`) di backend maupun frontend.
 

@@ -14,7 +14,6 @@ export type SimResult = {
   seq: number;
   classification: ClassifyClassification;
   evidence: number;
-  rules: string;
   // Paket sampel atomik F8.5: evaluasi + reading yang menghasilkan seq ini.
   // Evidence fokus selalu dibaca dari paket yang sama dengan grafik & KPI.
   ruleEvaluations: ClassifyRuleEvaluation[];

@@ -24,7 +24,6 @@ export interface FocusInput {
   limitations: string[];
   sampleSeq: number;
   timestamp: string;
-  rulesVersion: string;
   evaluationStatus: string;
   globalTrouble: string;
   /** Referensi efektif runtime (/tier-refs). Null => perilaku Jalur A lama. */
@@ -442,7 +441,6 @@ export function buildFocusedEvidence(input: FocusInput): FocusedEvidenceView | n
     label,
     sample_seq: input.sampleSeq,
     timestamp: input.timestamp,
-    rules_version: input.rulesVersion,
     evaluation_status: input.evaluationStatus,
     global_trouble: input.globalTrouble,
     verdict,

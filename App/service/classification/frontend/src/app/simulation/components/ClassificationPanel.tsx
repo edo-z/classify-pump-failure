@@ -77,7 +77,7 @@ export default function ClassificationPanel({ result, selectedFailure }: Classif
               </div>
             )}
             <p style={{ fontSize: "0.78rem", color: "#6b7280" }}>
-              evidence {result.evidence} • rules {result.rules} • status {result.classification.evaluation_status}
+              evidence {result.evidence} • status {result.classification.evaluation_status}
             </p>
           </details>
         </div>

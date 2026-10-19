@@ -9,15 +9,11 @@ server yang memangkas evidensi (trailing 31 pasca-gap 10 dtk).
 
 from __future__ import annotations
 
-import functools
-import json
-import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.classification.engine import RULES_FILE
 from app.classification.evidence import (
     EVIDENCE_MAXLEN,
     LIVE_GAP_THRESHOLD_MS,
@@ -32,25 +28,11 @@ from app.classification.profiles import get_profile_capacity
 from app.classification.service import get_engine
 from app.classification.setpoints import resolve_effective_setpoint
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter(tags=["classify"])
 
 # Batas jendela per panggilan: cukup untuk evidensi 31 + toleransi,
 # kecil untuk menolak penyalahgunaan payload raksasa.
 MAX_WINDOW_READINGS = 40
-
-
-@functools.lru_cache(maxsize=1)
-def get_rules_version() -> str:
-    """Versi rules.json — deteksi drift aturan dari sisi BE."""
-    try:
-        raw = json.loads(RULES_FILE.read_text(encoding="utf-8"))
-        version = raw.get("version")
-        return str(version) if version is not None else "unknown"
-    except Exception as exc:
-        logger.warning("rules version read failed: %s", exc)
-        return "unknown"
 
 
 class ClassifyReading(BaseModel):
@@ -92,7 +74,6 @@ class ClassifyRequest(BaseModel):
 class ClassifyResponse(BaseModel):
     profile_id: str
     namespace: str
-    rules_version: str
     evidence_size: int
     classification: ClassificationResult
 
@@ -140,7 +121,6 @@ def classify_single_shot(req: ClassifyRequest) -> ClassifyResponse:
     return ClassifyResponse(
         profile_id=req.profile_id,
         namespace=req.namespace,
-        rules_version=get_rules_version(),
         evidence_size=len(evidence),
         classification=classification,
     )

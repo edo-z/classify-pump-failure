@@ -30,7 +30,7 @@ Env kanonis: `backend/.env.example` (jangan commit `.env` asli).
 
 ## Untuk tim BE (integrasi klasifikasi)
 
-Satu endpoint stabil, stateless, tanpa CSV: `POST /classify` — kirim `{profile_id, namespace, readings[1..40]}` → terima `{trouble_type, matched_rules, sensor_snapshot, limitations, evaluation_status, rules_version}`. Wajib header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set. Panduan lengkap + contoh curl/Python/fetch: **`App/service/classification/docs/18-integrasi.md`** (skema interaktif: `/docs`).
+Satu endpoint stabil, stateless, tanpa CSV: `POST /classify` — kirim `{profile_id, namespace, readings[1..40]}` → terima `{trouble_type, matched_rules, sensor_snapshot, limitations, evaluation_status}`. Wajib header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set. Panduan lengkap + contoh curl/Python/fetch: **`App/service/classification/docs/18-integrasi.md`** (skema interaktif: `/docs`).
 
 ## Ritual mutu
 

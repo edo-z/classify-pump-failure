@@ -49,7 +49,6 @@ export interface FocusedEvidenceView {
   label: string;
   sample_seq: number;
   timestamp: string;
-  rules_version: string;
   evaluation_status: string;
   global_trouble: string;
   verdict: EvidenceVerdict;

@@ -200,7 +200,6 @@ export default function SimulationPage() {
         seq,
         classification: res.classification,
         evidence: res.evidence_size,
-        rules: res.rules_version,
         ruleEvaluations: res.classification.rule_evaluations ?? [],
         reading,
       });
@@ -320,7 +319,6 @@ export default function SimulationPage() {
       limitations: result.classification.limitations ?? [],
       sampleSeq: result.seq,
       timestamp: result.reading.timestamp,
-      rulesVersion: result.rules,
       evaluationStatus: result.classification.evaluation_status,
       globalTrouble: result.classification.trouble_type,
       refs: tierRefs,
@@ -403,7 +401,7 @@ export default function SimulationPage() {
                 </select>
               </label>
             </div>
-            <p className="sim-sessionline">sesi {sessionShort} • seed {seed} • rules {result?.rules ?? "—"} • slider = target, engine menilai aktual</p>
+            <p className="sim-sessionline">sesi {sessionShort} • seed {seed} • slider = target, engine menilai aktual</p>
           </details>
         </div>
 

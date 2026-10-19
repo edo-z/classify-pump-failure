@@ -83,7 +83,6 @@ const { classification } = await r.json();
 {
   "profile_id": "5000_lps",
   "namespace": "96",
-  "rules_version": "1.1",
   "evidence_size": 12,
   "classification": {
     "pump_id": 5000,
@@ -102,7 +101,6 @@ const { classification } = await r.json();
 - `trouble_type`: 9 enum — `pompa_tersangkut_sampah`, `turbulensi`, `banyak_sampah`, `unbalance`, `undervoltage`, `overvoltage`, `dry_run`, `panel_overheat`, `normal`.
 - `evaluation_status`: `FULL` (lengkap) / `PARTIAL` / `INSUFFICIENT_DATA`; data hilang → `tidak terdeteksi` + catatan di `limitations`.
 - `evidence_size` < kiriman = gap memutus histori (normal, bukan error).
-- `rules_version`: simpan di sisi BE; bila berubah → sinkronkan ulang ekspektasi ambang.
 
 ## Error
 
@@ -113,12 +111,12 @@ const { classification } = await r.json();
 | 422 | `readings` kosong/>40, timestamp naive, tak ada sampel layak | perbaiki mapping |
 | 500 | galat internal | retry + laporkan body `detail` |
 
-## Ambang lestari (jangan hardcode ulang di BE — baca `rules_version`)
+## Ambang lestari (jangan hardcode ulang di BE)
 
 undervoltage < 360 V • overvoltage > 410 V • panel_overheat ≥ 60 °C • unbalance ≥ 10% • pompa tersangkut: frekuensi ≤ 10 Hz + minimal 3 dari 4 tanda (langsung diputuskan).
 
 ## Versioning
 
-Perubahan `rules.json` = rilis minor + `rules_version` baru + notifikasi + contract test (`tests/test_contract.py`) hijau. Bentuk request/response stabil; perubahan breaking butuh kesepakatan versi baru.
+Perubahan `rules.json` tidak lagi terekspos lewat API (envelope tanpa `rules_version`); komunikasikan via catatan rilis + contract test (`tests/test_contract.py`) hijau. Bentuk request/response stabil; perubahan breaking butuh kesepakatan versi baru.
 
 URL **tidak** memakai prefix versi (`POST /classify`, bukan `/v1/classify`). Kebijakan penamaan ada di `03-contracts.md`.

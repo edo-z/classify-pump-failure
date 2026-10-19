@@ -172,7 +172,7 @@ export default function MathematicalEvidence({ view }: { view: FocusedEvidenceVi
       <details className="sim-details">
         <summary>Detail sumber & keterbatasan</summary>
         <ul style={{ fontSize: "0.78rem", color: "#4b5563", margin: "0.4rem 0" }}>
-          <li>timestamp {view.timestamp} · rules {view.rules_version} · status {view.evaluation_status}</li>
+          <li>timestamp {view.timestamp} · status {view.evaluation_status}</li>
           <li>Sumber angka: engine (parse string evaluasi) atau snapshot/reading terakhir; threshold tak-tersedia tidak dikarang.</li>
           {view.missing_requirements.length > 0 && (
             <li>missing_requirements: {view.missing_requirements.join("; ")}</li>

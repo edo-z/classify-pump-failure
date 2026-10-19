@@ -50,7 +50,7 @@ Semua pola langsung diputuskan 1x (`count_trigger: 1`), tanpa menunggu bukti ber
 - Hasil **tidak disimpan** di DB, tidak ada publish MQTT, bunyi suara, atau kirim otomatis ke Dexmin/LLM. Hanya jawaban JSON di memori. Refresh = pindai ulang. Chat dan klasifikasi tetap pisah.
 - Chat `/chat` pakai `language` (`lapangan|en`), bukan `profile_id` (klasifikasi tetap `profile_id`).
 - Frontend `/documents`: buang `normal`, pakai `trouble_type` untuk kartu angka, area warna di grafik, tabel + tombol Zoom, dan toast "Selesai: X dari Y titik". `matched_rules` + `snapshot` + `limitations` dikirim backend tapi belum ditampilkan (blok "Indikasi Tambahan" saat ini mati). **Catatan refactor 2026-10-19:** endpoint yang dipakai halaman ini (`/documents`, `/telemetry`, `/classification/*`) sudah dihapus; lihat `11` dan `20`.
-- Tim BE: baca `classification.trouble_type` untuk notif sendiri, simpan `rules_version` untuk sinkron ambang. Jangan hardcode `360/410/60` di BE.
+- Tim BE: baca `classification.trouble_type` untuk notif sendiri. Jangan hardcode `360/410/60` di BE — ambang milik server.
 
 ## 4. Contoh
 

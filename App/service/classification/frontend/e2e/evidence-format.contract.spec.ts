@@ -36,7 +36,6 @@ function inputFor(fx: Fx, failure: string, opts?: { refs?: TierRefs | null; prof
     limitations: c.limitations ?? [],
     sampleSeq: 18,
     timestamp: c.timestamp ?? "",
-    rulesVersion: fx.response.rules_version,
     evaluationStatus: c.evaluation_status,
     globalTrouble: c.trouble_type,
     refs: opts?.refs ?? null,
