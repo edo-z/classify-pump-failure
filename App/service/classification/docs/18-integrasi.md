@@ -1,6 +1,6 @@
 # 18 — Integrasi Klasifikasi untuk Tim BE (Apps/Web)
 
-> Refactor 2026-10-19: endpoint aktif hanya `POST /v1/classify`,
+> Refactor 2026-10-19: endpoint aktif hanya `POST /classify`,
 > `/profile-setpoints`, dan `GET /health`. Endpoint file/CSV dihapus.
 > Target kontrak Node.js dan perbedaan respons: `20-migrasi-nodejs.md`.
 
@@ -8,7 +8,7 @@ Kontrak stabil satu endpoint. Aturan 100% milik service ini; tim BE hanya mengir
 
 ## Endpoint
 
-`POST /v1/classify` — single-shot, stateless, tanpa CSV/storage/session.
+`POST /classify` — single-shot, stateless, tanpa CSV/storage/session.
 Base lokal `http://127.0.0.1:3031`, produksi `https://class-api.aldozeno.my.id`.
 Skema interaktif: `GET /docs`.
 
@@ -53,14 +53,14 @@ Aturan main:
 ### Contoh panggil
 
 ```bash
-curl -fsS -X POST https://class-api.aldozeno.my.id/v1/classify \
+curl -fsS -X POST https://class-api.aldozeno.my.id/classify \
   -H 'Content-Type: application/json' -H "X-API-Key: $CLASSIFICATION_API_KEY" \
   -d '{"profile_id":"5000_lps","namespace":"96","readings":[{"timestamp":"2026-06-12T14:33:56+07:00","output_frequency":40.0,"input_voltage":380.0}]}' | jq .classification.trouble_type
 ```
 
 ```python
 import httpx
-r = httpx.post(f"{BASE}/v1/classify", json={
+r = httpx.post(f"{BASE}/classify", json={
     "profile_id": "5000_lps", "namespace": namespace, "readings": readings[-40:],
 }, headers={"X-API-Key": API_KEY}, timeout=30)
 r.raise_for_status()
@@ -68,7 +68,7 @@ trouble = r.json()["classification"]["trouble_type"]
 ```
 
 ```js
-const r = await fetch(`${BASE}/v1/classify`, {
+const r = await fetch(`${BASE}/classify`, {
   method: "POST",
   headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
   body: JSON.stringify({ profile_id: "5000_lps", namespace, readings: readings.slice(-40) }),
@@ -119,4 +119,6 @@ undervoltage < 360 V • overvoltage > 410 V • panel_overheat ≥ 60 °C • u
 
 ## Versioning
 
-Perubahan `rules.json` = rilis minor + `rules_version` baru + notifikasi + contract test (`tests/test_contract_v1.py`) hijau. Bentuk request/response v1 tidak berubah tanpa versi mayor.
+Perubahan `rules.json` = rilis minor + `rules_version` baru + notifikasi + contract test (`tests/test_contract.py`) hijau. Bentuk request/response stabil; perubahan breaking butuh kesepakatan versi baru.
+
+URL **tidak** memakai prefix versi (`POST /classify`, bukan `/v1/classify`). Kebijakan penamaan ada di `03-contracts.md`.

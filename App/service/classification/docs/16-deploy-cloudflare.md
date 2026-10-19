@@ -24,7 +24,7 @@ Mesin 24/7 + linger aktif.
 Tidak ada policy Zero Trust; kedua hostname terbuka internet. Endpoint sensitif
 yang ikut terbuka (backend tanpa auth bawaan):
 - `PUT /profile-setpoints/*` (mengubah acuan klasifikasi semua site)
-- `POST /v1/classify` (bila `CLASSIFICATION_API_KEY` kosong)
+- `POST /classify` (bila `CLASSIFICATION_API_KEY` kosong)
 Bila kelak perlu proteksi, opsi termurah: isi `CLASSIFICATION_API_KEY`.
 Catatan refactor 2026-10-19: endpoint dokumen/upload/telemetry/classification
 sudah dihapus (lihat `12` dan `20`).
@@ -32,4 +32,4 @@ sudah dihapus (lihat `12` dan `20`).
 ## Verifikasi penerimaan
 - `GET https://class-api.aldozeno.my.id/health` → `ok`
 - `GET https://classify.aldozeno.my.id/documents` → 200 (halaman; API lama 404)
-- `POST https://class-api.aldozeno.my.id/v1/classify` → 200
+- `POST https://class-api.aldozeno.my.id/classify` → 200

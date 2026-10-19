@@ -13,12 +13,12 @@ import {
   type SlotTemplate,
   type ValueSource,
 } from "./evidence-contract";
-import type { V1RuleEvaluation, TierRefs, TierRuleRefs, CapabilityRefs } from "../api";
+import type { ClassifyRuleEvaluation, TierRefs, TierRuleRefs, CapabilityRefs } from "../api";
 import { FAILURE_MAP } from "./failure-signals";
 
 export interface FocusInput {
   failureType: string;
-  ruleEvaluations: V1RuleEvaluation[];
+  ruleEvaluations: ClassifyRuleEvaluation[];
   snapshot: Record<string, number | null>;
   lastReading: Record<string, number | null>;
   limitations: string[];

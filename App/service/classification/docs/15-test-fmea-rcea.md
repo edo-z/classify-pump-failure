@@ -14,6 +14,12 @@ RCEA = Root Cause + Effects Analysis (akar + dampak + aksi).
 > `test_ingest_*`, `test_tier_refs`. Referensi wiring/upload/scan di bawah bersifat
 > **historis**. Oracle perilaku engine saat ini: `backend/tests/golden/`
 > (25 skenario) + `tests/test_golden.py`; detail `20-migrasi-nodejs.md`.
+>
+> Amendemen 2026-10-19 (5R/Rapi — hapus penamaan versi): `POST /v1/classify` →
+> `POST /classify`; `app/api/v1.py` → `classify.py`; tipe `V1*` → `Classify*`;
+> `tests/test_contract_v1.py` → `test_contract.py` (5 test, tetap hijau).
+> Kontrak request/response **tidak berubah**. Rekam di `12-api-reference.md`
+> §Rename dan kebijakan di `03-contracts.md` §Kebijakan Penamaan.
 
 ## 1. FMEA per area uji (urut RPN sisa tertinggi)
 

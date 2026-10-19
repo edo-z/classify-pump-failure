@@ -2,7 +2,7 @@
 
 > Refactor 2026-10-19: jalur CSV/normalisasi (pembaca file, skema lite, status file)
 > **dihapus** dari backend. Nama kolom kanonis di bawah tetap berlaku sebagai
-> nama field pada `POST /v1/classify`. Lihat `20`.
+> nama field pada `POST /classify`. Lihat `20`.
 
 ## Kanal Data Pembacaan
 

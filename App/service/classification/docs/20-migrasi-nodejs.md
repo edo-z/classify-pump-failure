@@ -9,7 +9,7 @@
 - **Satu engine, satu algoritma.** Tidak boleh ada dua implementasi rumus yang berbeda.
 - Perilaku Python dibekukan menjadi **golden fixtures** (`backend/tests/golden/`)
   sebagai kontrak kesetaraan.
-- Kontrak integrasi aktif setelah refactor: `POST /v1/classify`,
+- Kontrak integrasi aktif setelah refactor: `POST /classify`,
   `/profile-setpoints`, `GET /health`.
 - Schema MySQL 7 tabel (`07-storage.md`, `dexmin.sql`) **tetap** kontrak
   arsitektur DEXMIN; yang dihapus hanyalah *implementasi* ingestion Python.
@@ -19,10 +19,10 @@
 ```text
 backend/
 ├── app/
-│   ├── main.py                     # FastAPI: /v1/classify, /profile-setpoints, /health
+│   ├── main.py                     # FastAPI: /classify, /profile-setpoints, /health
 │   ├── api_key.py                  # middleware X-API-Key
 │   ├── api/
-│   │   ├── v1.py                   # kontrak stabil single-shot
+│   │   ├── classify.py            # kontrak stabil single-shot
 │   │   └── profile_setpoints.py    # acuan per profil
 │   └── classification/             # ENGINE (yang dimigrasikan)
 │       ├── engine.py               # orkestrator RulesEngine
@@ -57,7 +57,7 @@ backend-node/            # atau packages/classification-engine
 │   │   ├── evidence.js      # trailing 31 pasca-gap
 │   │   ├── support.js       # MA30/CMA_n, freq eq 2dp
 │   │   └── rules.json       # SALINAN identik (hash sama)
-│   ├── api/             # /v1/classify, /profile-setpoints, /health
+│   ├── api/             # /classify, /profile-setpoints, /health
 │   ├── ingest/          # DB ingestion MySQL (tahap migrasi, pengganti ingest_db)
 │   └── server.js
 └── test/
@@ -66,7 +66,7 @@ backend-node/            # atau packages/classification-engine
 
 ## Kontrak JSON Input
 
-Identik dengan `/v1/classify` (lihat `18-integrasi.md`): `profile_id`,
+Identik dengan `/classify` (lihat `18-integrasi.md`): `profile_id`,
 `setpoint_freq` (opsional), `namespace`, `readings` (1–40, urut bebas,
 `timestamp` wajib ber-zona waktu).
 
@@ -107,7 +107,7 @@ Identik dengan `/v1/classify` (lihat `18-integrasi.md`): `profile_id`,
 Perbedaan ini **disengaja** dan harus ditangani lewat transformasi respons yang
 eksplisit/teruji — bukan dengan mengubah engine.
 
-| Field | Aktual `/v1/classify` | Target migrasi |
+| Field | Aktual `/classify` | Target migrasi |
 |---|---|---|
 | envelope | `{profile_id, namespace, rules_version, evidence_size, classification}` | `{profile_id, namespace, classification}` |
 | `classification.pump_id` | ada (= `capacity_lps`, mis. 5000) | **tidak ada** |
@@ -183,7 +183,7 @@ Migrasi dinyatakan setara bila:
   - `evaluation_status`/`limitations` Python dipetakan secara eksplisit (boleh di luar payload target).
 - Transformasi respons aktual→target diuji terpisah (test transformasi eksplisit).
 - Tiga berkas `rules.json`/`pump_profiles.json`/`profile_setpoints.json` disalin **identik** (hash sama).
-- Endpoint Node.js: `POST /v1/classify` + `GET /health` berfungsi dengan kontrak input sama.
+- Endpoint Node.js: `POST /classify` + `GET /health` berfungsi dengan kontrak input sama.
 - Perbedaan `matched_conditions` string diverifikasi via pemetaan, bukan ditebak.
 
 ## Di Luar Scope Tahap Ini

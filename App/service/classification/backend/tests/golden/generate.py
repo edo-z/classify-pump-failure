@@ -8,7 +8,7 @@ Without --write it only prints a summary. Regression tests never call this
 module, so expected outputs are never regenerated automatically.
 
 Each scenario is written as:
-    <name>.input.json    -> request body for POST /v1/classify
+    <name>.input.json    -> request body for POST /classify
     <name>.expected.json -> full Python response (oracle)
 
 The expected files intentionally keep every field produced by the current
@@ -262,7 +262,7 @@ def scenarios() -> dict[str, dict]:
 
 
 def classify(client: TestClient, body: dict) -> dict:
-    response = client.post("/v1/classify", json=body)
+    response = client.post("/classify", json=body)
     if response.status_code != 200:
         raise SystemExit(
             f"{body['namespace']}: HTTP {response.status_code} {response.text}"

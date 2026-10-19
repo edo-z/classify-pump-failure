@@ -1,6 +1,6 @@
 // 5R Simulasi Sensor — Automatic Variation + engine klasifikasi aktual.
 // Slider = TARGET sensor; engine menilai NILAI AKTUAL sintetis (target + noise).
-// Tanpa rumus diagnosis baru: semua vonis dari POST /v1/classify.
+// Tanpa rumus diagnosis baru: semua vonis dari POST /classify.
 //
 // Tanggung jawab file ini: session lifecycle + sampling clock + state.
 // Presentasi dipecah ke components/ (SensorControlsPanel, LiveTrendPanel,
@@ -13,7 +13,7 @@ import {
   classifyWindow,
   getTierRefs,
   type TierRefs,
-  type V1Reading,
+  type ClassifyReading,
 } from "../api";
 import { FAILURE_COLORS } from "../lib/replay/constants";
 import {
@@ -90,7 +90,7 @@ export default function SimulationPage() {
   const phaseRef = useRef<Phase>("idle");
   const sessionRef = useRef<string>("");
   const seqRef = useRef(0);
-  const bufferRef = useRef<V1Reading[]>([]);
+  const bufferRef = useRef<ClassifyReading[]>([]);
   const noiseRef = useRef<Record<string, SensorNoise>>({});
   const randRef = useRef<() => number>(Math.random);
   const hoursBaseRef = useRef(0);
@@ -118,7 +118,7 @@ export default function SimulationPage() {
     }
   }
 
-  function buildSnapshot(): V1Reading & { __targets: Record<string, number | null> } {
+  function buildSnapshot(): ClassifyReading & { __targets: Record<string, number | null> } {
     const now = new Date().toISOString();
     const { targets: tg, amps: am, enabled: en, manuals: man } = liveRef.current;
     const actuals: Record<string, number | null> = {};
@@ -165,7 +165,7 @@ export default function SimulationPage() {
       actuals[m.key] = val !== null && Number.isFinite(val) ? clip(val, m.min, m.max) : null;
       tgs[m.key] = actuals[m.key];
     }
-    return { timestamp: now, ...(actuals as Omit<V1Reading, "timestamp">), __targets: tgs } as V1Reading & {
+    return { timestamp: now, ...(actuals as Omit<ClassifyReading, "timestamp">), __targets: tgs } as ClassifyReading & {
       __targets: Record<string, number | null>;
     };
   }
@@ -205,7 +205,7 @@ export default function SimulationPage() {
         reading,
       });
       const actuals: Record<string, number | null> = {};
-      for (const s of NOISE_SENSORS) actuals[s.key] = (reading[s.key as keyof V1Reading] as number | null) ?? null;
+      for (const s of NOISE_SENSORS) actuals[s.key] = (reading[s.key as keyof ClassifyReading] as number | null) ?? null;
       setSnapshots((prev) =>
         [...prev, { seq, time: reading.timestamp, trouble: res.classification.trouble_type, actuals, targets: __targets }].slice(-MAX_HISTORY),
       );

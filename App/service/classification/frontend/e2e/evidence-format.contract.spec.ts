@@ -1,5 +1,5 @@
 // F8.6 contract: formatter FocusedEvidenceView vs respons engine asli.
-// Browser-less (tanpa fixture page). Fixture = respons /v1/classify nyata
+// Browser-less (tanpa fixture page). Fixture = respons /classify nyata
 // yang direkam dari backend (lihat e2e/fixtures/evidence/*.json).
 import { expect, test } from "@playwright/test";
 import { buildFocusedEvidence } from "../src/app/simulation/evidence-format";

@@ -1,6 +1,6 @@
 # 08 — Kondisi per Pompa
 
-> ARSIP — jalur live/MQTT dihapus 2026-10-10. Berlaku hanya untuk `run/scan/v1`, lihat `19`. Dokumen ini disimpan sebagai historis.
+> ARSIP — jalur live/MQTT dihapus 2026-10-10. Berlaku hanya untuk `run/scan/classify`, lihat `19`. Dokumen ini disimpan sebagai historis.
 
 ## Isi Kondisi
 

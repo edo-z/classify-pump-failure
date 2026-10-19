@@ -15,21 +15,21 @@ Ada 9 hasil: `pompa_tersangkut_sampah`, `turbulensi`, `banyak_sampah`, `unbalanc
 
 ```mermaid
 flowchart LR
-    JSON[JSON langsung] --> V1[POST /v1/classify]
-    V1 --> ENG[Mesin Aturan]
+    JSON[JSON langsung] --> API[POST /classify]
+    API --> ENG[Mesin Aturan]
     ENG --> NOTIF[Notifikasi]
 ```
 
 | Jalur | Butuh CSV? | Butuh `profile_id`? | Keterangan |
 |---|---|---|---|
-| `POST /v1/classify` | Tidak | Ya + `namespace` wajib (ID site) | Stateless, tanpa simpan file. Untuk tim BE/MQTT. Max 40 readings. |
+| `POST /classify` | Tidak | Ya + `namespace` wajib (ID site) | Stateless, tanpa simpan file. Untuk tim BE/MQTT. Max 40 readings. |
 
 Aturan potong (berlaku semua jalur):
 
 - Dipakai **waktu kejadian** dari sensor, bukan waktu terima. Urutan bebas, server yang mengurutkan.
 - Ambil **maks 31 data terakhir**. Berhenti kalau ada **jeda > 10 detik**.
-- Data kosong dibiarkan kosong, tidak diisi `0`. `timestamp` di `v1` wajib ber-zona waktu.
-- MQTT/live di dalam service ini sudah dihapus (2026-10-10). Tim BE baca MQTT di luar, lalu kirim ke `v1/classify`.
+- Data kosong dibiarkan kosong, tidak diisi `0`. `timestamp` pada endpoint ini wajib ber-zona waktu.
+- MQTT/live di dalam service ini sudah dihapus (2026-10-10). Tim BE baca MQTT di luar, lalu kirim ke `/classify`.
 
 Lihat: `01` (gambaran umum), `04` (alir data), `18` (kontrak BE).
 
@@ -54,7 +54,7 @@ Semua pola langsung diputuskan 1x (`count_trigger: 1`), tanpa menunggu bukti ber
 
 ## 4. Contoh
 
-Input (`v1`):
+Input (`/classify`):
 
 ```json
 {"profile_id": "5000_lps", "namespace": "96", "readings": [{"timestamp": "2026-06-12T14:33:56+07:00", "output_frequency": 40.0, "input_voltage": 355.0}]}

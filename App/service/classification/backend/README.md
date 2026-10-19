@@ -5,7 +5,7 @@ Run: `uvicorn app.main:app --port 3031`.
 Port: API `3031`, frontend `3030`.
 Env kanonis: `backend/.env.example` (`CLASSIFICATION_API_KEY`).
 Health: `GET /health` → `{status ok|degraded, rules_exists, rules_loaded, rules_error}`.
-v1 tim BE: `POST /v1/classify` (single-shot, stateless; lihat `docs/18-integrasi.md`).
+Klasifikasi tim BE: `POST /classify` (single-shot, stateless; lihat `docs/18-integrasi.md`).
 Acuan profil: `GET/PUT /profile-setpoints`.
 Auth: header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set (401 bila salah).
 Evidence: `app/classification/evidence.py` (trailing 31, gap 10s).

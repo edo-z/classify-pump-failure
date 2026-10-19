@@ -2,7 +2,7 @@
 
 Each case in ``tests/golden/`` is a frozen pair:
 
-    <name>.input.json    -> POST /v1/classify request body
+    <name>.input.json    -> POST /classify request body
     <name>.expected.json -> full Python response captured before refactor
 
 These files are the behavioural contract for the Node.js migration. The test
@@ -52,7 +52,7 @@ def test_golden_case(name: str, input_path: Path, expected_path: Path) -> None:
     body = json.loads(input_path.read_text(encoding="utf-8"))
     expected = json.loads(expected_path.read_text(encoding="utf-8"))
 
-    response = TestClient(app).post("/v1/classify", json=body)
+    response = TestClient(app).post("/classify", json=body)
 
     assert response.status_code == 200, f"{name}: {response.text}"
     assert response.json() == expected, f"{name}: classification output changed"

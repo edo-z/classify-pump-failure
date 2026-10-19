@@ -1,7 +1,7 @@
 # 04 — Alir Data
 
 > Refactor 2026-10-19: jalur file/CSV dihapus. Satu jalur tersisa: JSON readings
-> → `/v1/classify` → jawaban JSON. Detail migrasi: `20`.
+> → `/classify` → jawaban JSON. Detail migrasi: `20`.
 
 ## JSON → Penilaian Murni per-Sampel → Jawaban
 

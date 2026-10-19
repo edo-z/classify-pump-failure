@@ -28,7 +28,7 @@ CORS backend: `allow_origins=["*"]` dengan `allow_credentials=False`, `allow_met
 {
   "service": "Pump Trouble Classification",
   "interfaces": {
-    "v1": "/v1/classify",
+    "classify": "/classify",
     "profile_setpoints": "/profile-setpoints",
     "health": "/health",
     "docs": "/docs"
@@ -36,9 +36,9 @@ CORS backend: `allow_origins=["*"]` dengan `allow_credentials=False`, `allow_met
 }
 ```
 
-## v1 Klasifikasi Single-Shot (kontrak stabil tim BE)
+## Klasifikasi Single-Shot (kontrak stabil tim BE)
 
-`POST /v1/classify` — stateless, tanpa CSV. Wajib header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set (401 bila salah). Lihat `18-integrasi.md` untuk panduan lengkap + contoh curl/Python/fetch.
+`POST /classify` — stateless, tanpa CSV. Wajib header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set (401 bila salah). Lihat `18-integrasi.md` untuk panduan lengkap + contoh curl/Python/fetch.
 
 ```json
 // request
@@ -58,6 +58,18 @@ Batas: 1–40 readings; timestamp wajib ber-zona waktu (422 bila naive); profil 
 ```json
 { "500_lps": {"frequency_hz":35,"rpm":900,"torque":70}, "5000_lps": {"frequency_hz":40,"rpm":990,"torque":90} }
 ```
+
+## Rename (2026-10-19)
+
+Penamaan `v1`/`V1` dihapus (tidak diperlukan) — URL tidak memakai prefix versi:
+
+| Sebelum | Sesudah |
+|---|---|
+| `POST /v1/classify` | `POST /classify` |
+| key JSON `"v1"` pada `GET /` | key `"classify"` |
+| modul `app/api/v1.py`, tipe `V1*`, `tests/test_contract_v1.py` | `app/api/classify.py`, `Classify*`, `tests/test_contract.py` |
+
+Kebijakan: `03-contracts.md` §Kebijakan Penamaan.
 
 ## Endpoint yang Dihapus (2026-10-19)
 

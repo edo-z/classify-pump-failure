@@ -10,7 +10,7 @@ backend/app/
   main.py                 # Titik masuk layanan web
   api_key.py              # Middleware X-API-Key
   api/
-    v1.py                 # POST /v1/classify (kontrak stabil)
+    classify.py           # POST /classify (kontrak stabil)
     profile_setpoints.py  # Ubah acuan tiap pompa
   classification/
     engine.py             # Aturan penilaian (orkestrator)
@@ -48,7 +48,7 @@ frontend/src/app/
 | Modul | Peran | Batasan |
 |-------|-------|---------|
 | `classification` | Data → hasil (pembacaan terakhir; data hilang = tidak terdeteksi + catatan) | Tidak tahu tampilan/disk/DB |
-| `api/v1` | Penghubung web single-shot | Tidak mengandung logika aturan |
+| `api/classify` | Penghubung web single-shot | Tidak mengandung logika aturan |
 | `api/profile_setpoints` | Baca/ubah acuan profil | Tidak mengandung logika aturan |
 | `service.py` | Factory `get_engine()` | Tanpa CSV/FS/MySQL; tanpa duplikasi rumus |
 
@@ -57,14 +57,14 @@ frontend/src/app/
 ```mermaid
 flowchart TB
     subgraph Backend
-      V1[POST /v1/classify]
+      API[POST /classify]
       Settings[/profile-setpoints/]
       Engine[Mesin Aturan]
     end
     subgraph Klien
       BE[Tim BE / MQTT mapper]
     end
-    BE --> V1 --> Engine
+    BE --> API --> Engine
     Settings --> Engine
 ```
 

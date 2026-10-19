@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from app.api.profile_setpoints import router as profile_setpoints_router
-from app.api.v1 import router as v1_router
+from app.api.classify import router as classify_router
 from app.api_key import ApiKeyMiddleware
 from app.classification.engine import (
     RULES_FILE,
@@ -38,9 +38,9 @@ app.include_router(
     profile_setpoints_router
 )
 
-# v1 — kontrak stabil tim BE (single-shot, stateless).
+# Klasifikasi single-shot — kontrak stabil tim BE (stateless).
 app.include_router(
-    v1_router
+    classify_router
 )
 
 
@@ -81,7 +81,7 @@ def root():
             "Pump Trouble Classification"
         ),
         "interfaces": {
-            "v1": "/v1/classify",
+            "classify": "/classify",
             "profile_setpoints": (
                 "/profile-setpoints"
             ),

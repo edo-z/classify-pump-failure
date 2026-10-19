@@ -1,4 +1,4 @@
-"""v1 — kontrak stabil untuk tim BE (apps/web).
+"""Klasifikasi single-shot — kontrak stabil untuk tim BE (apps/web).
 
 Satu-satunya endpoint klasifikasi yang dijamin stabil: single-shot,
 stateless, tanpa CSV/storage/session. Aturan 100% milik engine ini
@@ -34,7 +34,7 @@ from app.classification.setpoints import resolve_effective_setpoint
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1", tags=["v1"])
+router = APIRouter(tags=["classify"])
 
 # Batas jendela per panggilan: cukup untuk evidensi 31 + toleransi,
 # kecil untuk menolak penyalahgunaan payload raksasa.
@@ -53,7 +53,7 @@ def get_rules_version() -> str:
         return "unknown"
 
 
-class V1Reading(BaseModel):
+class ClassifyReading(BaseModel):
     """Satu sampel sensor — nama kanonis, hilang = null (jangan 0)."""
 
     timestamp: datetime
@@ -77,7 +77,7 @@ class V1Reading(BaseModel):
     model_config = {"extra": "ignore"}
 
 
-class V1ClassifyRequest(BaseModel):
+class ClassifyRequest(BaseModel):
     profile_id: str = Field(examples=["5000_lps"])
     setpoint_freq: float | None = Field(default=None, examples=[40.0])
     namespace: str = Field(
@@ -86,10 +86,10 @@ class V1ClassifyRequest(BaseModel):
         description="ID site BE (mis. '96') — isolasi counter antar-site",
         examples=["96"],
     )
-    readings: list[V1Reading] = Field(min_length=1, max_length=MAX_WINDOW_READINGS)
+    readings: list[ClassifyReading] = Field(min_length=1, max_length=MAX_WINDOW_READINGS)
 
 
-class V1ClassifyResponse(BaseModel):
+class ClassifyResponse(BaseModel):
     profile_id: str
     namespace: str
     rules_version: str
@@ -97,7 +97,7 @@ class V1ClassifyResponse(BaseModel):
     classification: ClassificationResult
 
 
-def _to_sensor_reading(raw: V1Reading) -> SensorReading:
+def _to_sensor_reading(raw: ClassifyReading) -> SensorReading:
     if raw.timestamp.tzinfo is None:
         raise HTTPException(
             status_code=422,
@@ -106,8 +106,8 @@ def _to_sensor_reading(raw: V1Reading) -> SensorReading:
     return SensorReading.model_validate(raw.model_dump())
 
 
-@router.post("/classify", response_model=V1ClassifyResponse)
-def classify_single_shot(req: V1ClassifyRequest) -> V1ClassifyResponse:
+@router.post("/classify", response_model=ClassifyResponse)
+def classify_single_shot(req: ClassifyRequest) -> ClassifyResponse:
     """Vonis satu jendela: pembacaan terakhir + evidensi trailing 31 pasca-gap."""
     readings = [_to_sensor_reading(r) for r in req.readings]
     ordered = sorted(readings, key=lambda r: r.timestamp)
@@ -137,7 +137,7 @@ def classify_single_shot(req: V1ClassifyRequest) -> V1ClassifyResponse:
         operating_setpoint=operating_setpoint,
         trigger_namespace=f"site:{req.namespace}",
     )
-    return V1ClassifyResponse(
+    return ClassifyResponse(
         profile_id=req.profile_id,
         namespace=req.namespace,
         rules_version=get_rules_version(),

@@ -1,6 +1,6 @@
-"""C8 — Kontrak v1 stabil untuk tim BE (apps/web, non-Python).
+"""C8 — Kontrak klasifikasi stabil untuk tim BE (apps/web, non-Python).
 
-Mengunci: bentuk request/response /v1/classify, rules_version,
+Mengunci: bentuk request/response /classify, rules_version,
 evidence trimming server-side, namespace isolation, dan gate API-key.
 """
 
@@ -31,10 +31,10 @@ def _window(n=5, freq=40.0, start_ts="2026-06-12T14:33:56+07:00"):
 
 
 def _post(client, body, headers=None):
-    return client.post("/v1/classify", json=body, headers=headers or {})
+    return client.post("/classify", json=body, headers=headers or {})
 
 
-def test_v1_happy_path_shape():
+def test_classify_happy_path_shape():
     c = TestClient(app)
     r = _post(c, {
         "profile_id": "5000_lps",
@@ -60,7 +60,7 @@ def test_v1_happy_path_shape():
     assert cls["evaluation_status"] in ("FULL", "PARTIAL", "INSUFFICIENT_DATA")
 
 
-def test_v1_evidence_trimmed_server_side():
+def test_classify_evidence_trimmed_server_side():
     c = TestClient(app)
     r = _post(c, {
         "profile_id": "5000_lps",
@@ -71,7 +71,7 @@ def test_v1_evidence_trimmed_server_side():
     assert r.json()["evidence_size"] <= 31
 
 
-def test_v1_gap_resets_evidence():
+def test_classify_gap_resets_evidence():
     c = TestClient(app)
     w = _window(n=3)
     # Sisipkan gap 1 jam sebelum 2 sampel terakhir
@@ -82,7 +82,7 @@ def test_v1_gap_resets_evidence():
     assert r.json()["evidence_size"] == 2
 
 
-def test_v1_rejects():
+def test_classify_rejects():
     c = TestClient(app)
     ok = {"profile_id": "5000_lps", "namespace": "96", "readings": _window()}
     assert _post(c, {**ok, "readings": []}).status_code == 422
@@ -94,7 +94,7 @@ def test_v1_rejects():
     assert _post(c, unknown).status_code == 404
 
 
-def test_v1_api_key_gate(monkeypatch):
+def test_classify_api_key_gate(monkeypatch):
     import app.api_key as keymod
 
     c = TestClient(app)

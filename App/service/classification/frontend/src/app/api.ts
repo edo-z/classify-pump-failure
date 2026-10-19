@@ -339,10 +339,10 @@ export function buildChatStreamUrl(
   return `/api/llm/chat/${encodeURIComponent(sessionId)}/stream?${params.toString()}`;
 }
 
-// 5R Simulasi — klasifikasi jendela sintetis via kontrak v1 stabil
+// 5R Simulasi — klasifikasi jendela sintetis via kontrak klasifikasi stabil
 // (stateless, tanpa CSV). Namespace wajib prefix sim- agar counter
 // tak bocor ke site produksi.
-export type V1Reading = {
+export type ClassifyReading = {
   timestamp: string;
   motor_speed: number | null;
   output_frequency: number | null;
@@ -362,16 +362,16 @@ export type V1Reading = {
   arus_rms_w: number | null;
 };
 
-export type V1MatchedRule = {
+export type ClassifyMatchedRule = {
   trouble_type: string;
   matched_conditions: string[];
   total_conditions: number;
 };
 
 // Type-only mirror of backend RuleEvaluation (ClassificationResult.rule_evaluations).
-// Runtime sudah dikirim /v1/classify; deklarasi ini hanya mengetikkannya.
+// Runtime sudah dikirim /classify; deklarasi ini hanya mengetikkannya.
 // evaluation null / capability != READY => NOT_EVALUABLE di lapisan presentasi.
-export type V1RuleEvaluation = {
+export type ClassifyRuleEvaluation = {
   trouble_type: string;
   capability_status: "READY" | "SKIPPED" | "UNSUPPORTED";
   evaluation: "MATCH" | "NO_MATCH" | null;
@@ -380,30 +380,30 @@ export type V1RuleEvaluation = {
   total_conditions: number;
 };
 
-export type V1Classification = {
+export type ClassifyClassification = {
   trouble_type: string;
-  matched_rules: V1MatchedRule[];
+  matched_rules: ClassifyMatchedRule[];
   sensor_snapshot: Record<string, number | null>;
   limitations: string[];
   evaluation_status: string;
-  rule_evaluations: V1RuleEvaluation[];
+  rule_evaluations: ClassifyRuleEvaluation[];
 };
 
-export type V1ClassifyResult = {
+export type ClassifyResult = {
   profile_id: string;
   namespace: string;
   rules_version: string;
   evidence_size: number;
-  classification: V1Classification;
+  classification: ClassifyClassification;
 };
 
 export async function classifyWindow(
   profileId: string,
   setpointFreq: number | null,
   namespace: string,
-  readings: V1Reading[],
-): Promise<V1ClassifyResult> {
-  const response = await fetch("/api/v1/classify", {
+  readings: ClassifyReading[],
+): Promise<ClassifyResult> {
+  const response = await fetch("/api/classify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

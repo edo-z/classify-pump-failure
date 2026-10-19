@@ -6,7 +6,7 @@ Klasifikasi gangguan pompa (penggerak/VSD dan panel) dari data sensor file CSV: 
 
 ```
 App/service/classification/
-  backend/   # FastAPI :3031 — dokumen, normalisasi, telemetry, klasifikasi, v1 BE
+  backend/   # FastAPI :3031 — klasifikasi single-shot BE (/classify)
   frontend/  # Next.js :3030 — dokumen, chat Dexmin, admin setpoint
   docs/      # 01-overview … 18-integrasi (arsitektur, kontrak, operasi, FMEA)
 Data/        # CSV mentah + metadata/normalized (contoh: aldo_pump_logs_2.csv)
@@ -30,7 +30,7 @@ Env kanonis: `backend/.env.example` (jangan commit `.env` asli).
 
 ## Untuk tim BE (integrasi klasifikasi)
 
-Satu endpoint stabil, stateless, tanpa CSV: `POST /v1/classify` — kirim `{profile_id, namespace, readings[1..40]}` → terima `{trouble_type, matched_rules, sensor_snapshot, limitations, evaluation_status, rules_version}`. Wajib header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set. Panduan lengkap + contoh curl/Python/fetch: **`App/service/classification/docs/18-integrasi.md`** (skema interaktif: `/docs`).
+Satu endpoint stabil, stateless, tanpa CSV: `POST /classify` — kirim `{profile_id, namespace, readings[1..40]}` → terima `{trouble_type, matched_rules, sensor_snapshot, limitations, evaluation_status, rules_version}`. Wajib header `X-API-Key` bila `CLASSIFICATION_API_KEY` di-set. Panduan lengkap + contoh curl/Python/fetch: **`App/service/classification/docs/18-integrasi.md`** (skema interaktif: `/docs`).
 
 ## Ritual mutu
 

@@ -1,8 +1,18 @@
 # 03 — Perjanjian Data
 
+## Kebijakan Penamaan (5R/Rapi)
+
+- **Tanpa prefix versi pada URL.** Satu jalur kanonis `POST /classify`; tidak
+  ada `/v1`, `/v2`, dst. Bila kelak perlu perubahan breaking, tambahkan versi
+  secara eksplisit saat itu juga, bukan sekarang.
+- **`rules_version` bukan versi API.** Field respons `rules_version` (mis.
+  `"1.1"`) menandai versi berkas aturan `rules.json`, bukan versi endpoint.
+- **Nama tipe** memakai prefiks domain `Classify*` (mis. `ClassifyRequest`,
+  `ClassifyResponse`, `ClassifyReading`) di backend maupun frontend.
+
 ## Kolom Sensor Kanonis (16 kolom)
 
-File CSV dinormalisasi ke nama baku berikut. Kolom yang tidak ada di file dibiarkan kosong (`null`) — tidak pernah diisi nol.
+Payload `readings` (jalur `/classify`) memakai nama baku berikut. Kolom yang tidak ada dibiarkan kosong (`null`) — tidak pernah diisi nol.
 
 | Kolom | Data |
 |-------|------|

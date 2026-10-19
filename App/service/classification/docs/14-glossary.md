@@ -103,7 +103,7 @@ Nama kolom di file: `Start Time (WIB)`, `Motor Speed used`, `Output Frekuensi`, 
 
 ### Status Pantauan per Pompa
 
-> ARSIP — jalur live/MQTT dihapus 2026-10-10. Berlaku hanya untuk `run/scan/v1`, lihat `19`. Bagian di bawah ini sisa historis, bukan perilaku aktif.
+> ARSIP — jalur live/MQTT dihapus 2026-10-10. Berlaku hanya untuk `run/scan/classify`, lihat `19`. Bagian di bawah ini sisa historis, bukan perilaku aktif.
 
 Tiap pompa menyimpan di memori:
 

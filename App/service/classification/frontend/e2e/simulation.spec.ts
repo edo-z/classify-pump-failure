@@ -1,4 +1,4 @@
-// Simulasi Sensor: engine aktual via /v1/classify, tanpa mock vonis.
+// Simulasi Sensor: engine aktual via /classify, tanpa mock vonis.
 // T2/T3 memakai backend :3031 yang hidup (real engine, real thresholds).
 import { expect, test } from "@playwright/test";
 
@@ -53,16 +53,16 @@ test.describe("Simulasi Sensor", () => {
       timeout: 15000,
     });
     await page.getByRole("button", { name: "Stop" }).click();
-    const v1 = await page.getByTestId("actual-input_voltage").textContent();
+    const firstVoltage = await page.getByTestId("actual-input_voltage").textContent();
     await page.reload();
     await page.getByRole("button", { name: "Start Simulation" }).click();
     await expect(page.getByTestId("sim-seq")).toContainText("#1", {
       timeout: 15000,
     });
     await page.getByRole("button", { name: "Stop" }).click();
-    const v2 = await page.getByTestId("actual-input_voltage").textContent();
-    expect(v1).toBeTruthy();
-    expect(v2).toBe(v1);
+    const secondVoltage = await page.getByTestId("actual-input_voltage").textContent();
+    expect(firstVoltage).toBeTruthy();
+    expect(secondVoltage).toBe(firstVoltage);
   });
 
   test("T4 Stop membekukan sampel", async ({ page }) => {
