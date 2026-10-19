@@ -8,18 +8,11 @@ PYTHONPATH=. venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 3031 
 bun run dev   # 3030 teruskan /api/* → 127.0.0.1:3031
 ```
 
-Pengaturan penyimpanan default portabel via `_default_data_dir`: `$XDG_DATA_HOME/agent-maintenance/<name>`, fallback `~/Documents/Agent-Maintenance/Data/<name>`; ENV tetap menang bila di-set. Kanonis: `backend/.env.example`:
-
-```
-CLASSIFICATION_INPUT_DIR=/home/aldo/Documents/Agent-Maintenance/Data/classification-input
-CLASSIFICATION_NORMALIZED_DIR=/home/aldo/Documents/Agent-Maintenance/Data/classification-normalized
-```
-
-Data tersimpan: file mentah, info file, dan data siap nilai. Hapus file memindahkan semuanya ke `.trash/` (bisa dikembalikan manual), bukan unlink permanen — insiden 2026-10-12.
+Konfigurasi aktif: `backend/.env.example` hanya berisi `CLASSIFICATION_API_KEY` (kosong = DEV terbuka; isi di produksi).
 
 ## Penyimpanan (MySQL)
 
-Skema 7 tabel, relasi, seed gangguan, dan contoh query: `07-storage.md`. Sumber tunggal DDL: `Data/db-mysql/dexmin/dexmin.sql`. Koneksi via `CLASSIFICATION_DB_HOST/PORT/USER/PASSWORD/NAME` (default `127.0.0.1:3306`, db `dexmin`) di `backend/.env.example`.
+Skema 7 tabel, relasi, seed gangguan, dan contoh query: `07-storage.md`. Sumber tunggal DDL: `Data/db-mysql/dexmin/dexmin.sql`. Schema dipertahankan sebagai kontrak arsitektur; implementasi ingestion Python (`app/ingest_db/`) **dihapus** pada refactor 2026-10-19. Ingestion Node.js dibangun pada tahap migrasi (`20-migrasi-nodejs.md`), termasuk pemakaian `CLASSIFICATION_DB_*`. Tidak ada perubahan pada database production.
 
 Backend produksi jalan via systemd (`classify-pump-backend.service`, Restart=always). Jangan start manual via nohup — kalah balapan port. Restart resmi + audit hapus:
 

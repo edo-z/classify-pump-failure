@@ -1,32 +1,33 @@
 # 02 — Susunan Sistem
 
+> Refactor 2026-10-19: backend Python dirampingkan menjadi **engine + API stateless**.
+> Pipeline CSV/storage, CLI, dan DB ingest Python dihapus. Detail migrasi: `20`.
+
 ## Struktur Program Backend
 
 ```
 backend/app/
   main.py                 # Titik masuk layanan web
+  api_key.py              # Middleware X-API-Key
   api/
-    documents.py          # Unggah & kelola file
-    normalization.py      # Penyeragaman kolom file
-    telemetry.py          # Data siap nilai
-    classification.py     # Penilaian gangguan
+    v1.py                 # POST /v1/classify (kontrak stabil)
     profile_setpoints.py  # Ubah acuan tiap pompa
   classification/
-    engine.py             # Aturan penilaian
+    engine.py             # Aturan penilaian (orkestrator)
+    engine_support.py     # T_A MA30/CMA_n, freq_eq_2dp, helper
+    evaluator.py          # 8 aturan + panel/unbalance/voltage
+    evidence.py           # Trailing 31 pasca-gap
     models.py             # Bentuk data masuk & keluar
+    profiles.py           # Kapasitas per profil
+    setpoints.py          # override > profil
+    configuration_resolver.py
+    service.py            # Factory get_engine()
     rules.json            # Batas tiap ukuran pompa + aturan tegangan
     pump_profiles.json    # Profil 500 / 3000 / 5000 lps
     profile_setpoints.json# Frekuensi / kecepatan / torsi per profil
-    service.py            # Jembatan file → penilaian (potongan waktu, pemindaian)
-  data_pipeline/
-    models.py             # Bentuk dokumen mentah & data siap nilai
-    document_loader.py    # Baca file CSV
-    document_storage.py   # Simpan file di disk
-    normalization.py      # Petakan kolom → nama baku
-    service.py            # Alur unggah → seragam → siap nilai
 ```
 
-## Struktur Tampilan (Frontend)
+## Struktur Tampilan (Frontend) — di luar scope refactor
 
 ```
 frontend/src/app/
@@ -38,34 +39,33 @@ frontend/src/app/
   admin/page.tsx          # Ubah acuan tiap profil
 ```
 
+> Endpoint lama `/documents`, `/normalization`, `/telemetry`, `/classification/*`
+> sudah dihapus. Halaman `/documents` masih bisa dibuka, tetapi permintaan ke
+> endpoint tersebut akan gagal sampai frontend disesuaikan pada tahap migrasi.
+
 ## Modul & Tanggung Jawab
 
 | Modul | Peran | Batasan |
 |-------|-------|---------|
-| `data_pipeline` | File → data siap nilai 16 kolom, kosong tanpa diisi nol | Tidak tahu penilaian |
-| Aturan penilaian | Data → hasil (pembacaan terakhir; data hilang = tidak terdeteksi + catatan; pompa tersangkut sampah langsung diputuskan) | Tidak tahu tampilan/disk |
-| `api/*` | Penghubung web | Tidak mengandung logika aturan |
-| `replay.ts` | Gambar per sinyal (grafik dokumen) | Tidak tahu broker |
+| `classification` | Data → hasil (pembacaan terakhir; data hilang = tidak terdeteksi + catatan) | Tidak tahu tampilan/disk/DB |
+| `api/v1` | Penghubung web single-shot | Tidak mengandung logika aturan |
+| `api/profile_setpoints` | Baca/ubah acuan profil | Tidak mengandung logika aturan |
+| `service.py` | Factory `get_engine()` | Tanpa CSV/FS/MySQL; tanpa duplikasi rumus |
 
 ## Diagram Komponen
 
 ```mermaid
 flowchart TB
     subgraph Backend
+      V1[POST /v1/classify]
+      Settings[/profile-setpoints/]
       Engine[Mesin Aturan]
-      Batch[Batch Service]
-      Store[(Storage Dokumen)]
     end
-    subgraph Frontend
-      Buffer[Buffer per-signal]
-      Chart[Chart event-time]
-      Cards[Cards Latest Values]
-      Result[Hasil Klasifikasi]
+    subgraph Klien
+      BE[Tim BE / MQTT mapper]
     end
-    Store --> Batch --> Engine
-    Engine --> Result
-    Batch --> Buffer --> Chart
-    Engine --> Cards
+    BE --> V1 --> Engine
+    Settings --> Engine
 ```
 
-Keterangan sederhana: file (kelompok & pindai) → aturan penilaian → tampilan.
+Keterangan sederhana: JSON readings → aturan penilaian → jawaban JSON.

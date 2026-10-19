@@ -1,5 +1,9 @@
 # 18 — Integrasi Klasifikasi untuk Tim BE (Apps/Web)
 
+> Refactor 2026-10-19: endpoint aktif hanya `POST /v1/classify`,
+> `/profile-setpoints`, dan `GET /health`. Endpoint file/CSV dihapus.
+> Target kontrak Node.js dan perbedaan respons: `20-migrasi-nodejs.md`.
+
 Kontrak stabil satu endpoint. Aturan 100% milik service ini; tim BE hanya mengirim data sensor dalam bentuk reading kanonis. Dexmin/SSE di luar skop dokumen ini.
 
 ## Endpoint

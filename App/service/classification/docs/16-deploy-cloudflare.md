@@ -6,7 +6,7 @@ Mesin 24/7 + linger aktif.
 
 ## Komponen
 - `~/.cloudflared/config.yml` (tunnel `classify-pump`, catch-all 404)
-- `backend/.env` (JANGAN commit; storage dirs)
+- `backend/.env` (JANGAN commit; `CLASSIFICATION_API_KEY`)
 - systemd user: `classify-pump-backend`, `classify-pump-frontend`
   (`CLASSIFICATION_BACKEND_URL=http://127.0.0.1:3031`), `classify-pump-tunnel`
 
@@ -24,10 +24,12 @@ Mesin 24/7 + linger aktif.
 Tidak ada policy Zero Trust; kedua hostname terbuka internet. Endpoint sensitif
 yang ikut terbuka (backend tanpa auth bawaan):
 - `PUT /profile-setpoints/*` (mengubah acuan klasifikasi semua site)
-- `POST /documents/upload`, `DELETE /documents/*`
-Bila kelak perlu proteksi, opsi termurah: API-key header di backend.
+- `POST /v1/classify` (bila `CLASSIFICATION_API_KEY` kosong)
+Bila kelak perlu proteksi, opsi termurah: isi `CLASSIFICATION_API_KEY`.
+Catatan refactor 2026-10-19: endpoint dokumen/upload/telemetry/classification
+sudah dihapus (lihat `12` dan `20`).
 
 ## Verifikasi penerimaan
 - `GET https://class-api.aldozeno.my.id/health` → `ok`
-- `GET https://classify.aldozeno.my.id/documents` → 200
-- Upload CSV → 201 (batas 50MB)
+- `GET https://classify.aldozeno.my.id/documents` → 200 (halaman; API lama 404)
+- `POST https://class-api.aldozeno.my.id/v1/classify` → 200

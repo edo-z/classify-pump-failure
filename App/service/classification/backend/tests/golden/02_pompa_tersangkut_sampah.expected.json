@@ -1,0 +1,131 @@
+{
+  "profile_id": "5000_lps",
+  "namespace": "golden-pts",
+  "rules_version": "1.1",
+  "evidence_size": 1,
+  "classification": {
+    "pump_id": 5000,
+    "timestamp": "2026-10-19T10:00:00+07:00",
+    "trouble_type": "pompa_tersangkut_sampah",
+    "matched_rules": [
+      {
+        "trouble_type": "pompa_tersangkut_sampah",
+        "matched_conditions": [
+          "freq=8.0 <=10",
+          "power=450.0 >= 400",
+          "current=900.0 >= 867",
+          "torque=115.0 >= 110%",
+          "speed=200.0 >= 100"
+        ],
+        "total_conditions": 5
+      },
+      {
+        "trouble_type": "banyak_sampah",
+        "matched_conditions": [
+          "output_frequency=8.0 <= setpoint 40.0",
+          "output_power=450.0 >= 400",
+          "motor_current=900.0 >= 867",
+          "motor_torque=115.0 >= 90"
+        ],
+        "total_conditions": 4
+      }
+    ],
+    "sensor_snapshot": {
+      "output_frequency": 8.0,
+      "output_power": 450.0,
+      "motor_current": 900.0,
+      "motor_torque": 115.0,
+      "motor_speed": 200.0,
+      "ambient_temperature": 30.0,
+      "control_board_temperature": 40.0,
+      "inverter_temperature": 45.0,
+      "input_voltage": 380.0
+    },
+    "readings_count": 1,
+    "limitations": [
+      "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=900.0)"
+    ],
+    "evaluation_status": "FULL",
+    "rule_evaluations": [
+      {
+        "trouble_type": "pompa_tersangkut_sampah",
+        "capability_status": "READY",
+        "evaluation": "MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [
+          "freq=8.0 <=10",
+          "power=450.0 >= 400",
+          "current=900.0 >= 867",
+          "torque=115.0 >= 110%",
+          "speed=200.0 >= 100"
+        ],
+        "total_conditions": 5
+      },
+      {
+        "trouble_type": "turbulensi",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [
+          "freq=8.0 < setpoint 40.0",
+          "power=450.0 >= 400",
+          "torque=115.0 >= 90%"
+        ],
+        "total_conditions": 4
+      },
+      {
+        "trouble_type": "banyak_sampah",
+        "capability_status": "READY",
+        "evaluation": "MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [
+          "output_frequency=8.0 <= setpoint 40.0",
+          "output_power=450.0 >= 400",
+          "motor_current=900.0 >= 867",
+          "motor_torque=115.0 >= 90"
+        ],
+        "total_conditions": 4
+      },
+      {
+        "trouble_type": "dry_run",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 4
+      },
+      {
+        "trouble_type": "panel_overheat",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 3
+      },
+      {
+        "trouble_type": "unbalance",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 1
+      },
+      {
+        "trouble_type": "undervoltage",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 1
+      },
+      {
+        "trouble_type": "overvoltage",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 1
+      }
+    ]
+  }
+}

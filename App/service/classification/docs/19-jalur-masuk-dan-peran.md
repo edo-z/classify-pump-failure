@@ -8,23 +8,20 @@ Klasifikasi mengubah data sensor pompa menjadi bunyi/notifikasi gangguan. Bukan 
 
 Ada 9 hasil: `pompa_tersangkut_sampah`, `turbulensi`, `banyak_sampah`, `unbalance`, `undervoltage`, `overvoltage`, `dry_run`, `panel_overheat`, `normal` (sehat).
 
-## 1. Jalur masuk — 2 pintu, 1 mesin
+## 1. Jalur masuk — 1 pintu, 1 mesin
+
+> Refactor 2026-10-19: jalur file/CSV (unggah → telemetry → run/scan) **dihapus**.
+> Yang tersisa hanya jalur JSON langsung. Detail: `20-migrasi-nodejs.md`.
 
 ```mermaid
 flowchart LR
-    CSV[File CSV] --> TEL[Telemetry] --> RUN[run: 1 titik terakhir]
-    TEL --> SCAN[scan: semua titik]
     JSON[JSON langsung] --> V1[POST /v1/classify]
-    RUN --> ENG[Mesin Aturan]
-    SCAN --> ENG
-    V1 --> ENG
+    V1 --> ENG[Mesin Aturan]
     ENG --> NOTIF[Notifikasi]
 ```
 
 | Jalur | Butuh CSV? | Butuh `profile_id`? | Keterangan |
 |---|---|---|---|
-| `POST /documents/upload` → `POST /telemetry/{id}` → `POST /classification/run` | Ya | Ya (`500/3000/5000_lps`) | Vonis 1 titik terakhir file. `normalization` boleh dilewati. |
-| Sama, lalu `GET /classification/scan/{id}` | Ya | Ya | Pindai semua baris satu-per-satu. Dipakai tombol "Analisis File Ini". |
 | `POST /v1/classify` | Tidak | Ya + `namespace` wajib (ID site) | Stateless, tanpa simpan file. Untuk tim BE/MQTT. Max 40 readings. |
 
 Aturan potong (berlaku semua jalur):
@@ -52,7 +49,7 @@ Semua pola langsung diputuskan 1x (`count_trigger: 1`), tanpa menunggu bukti ber
 - `trouble_type` hanya **salah satu bunyi yang aktif** — yang dicek duluan secara teknis (tier → panel → unbalance → voltage). **Bukan juara, bukan prioritas bahaya.**
 - Hasil **tidak disimpan** di DB, tidak ada publish MQTT, bunyi suara, atau kirim otomatis ke Dexmin/LLM. Hanya jawaban JSON di memori. Refresh = pindai ulang. Chat dan klasifikasi tetap pisah.
 - Chat `/chat` pakai `language` (`lapangan|en`), bukan `profile_id` (klasifikasi tetap `profile_id`).
-- Frontend `/documents`: buang `normal`, pakai `trouble_type` untuk kartu angka, area warna di grafik, tabel + tombol Zoom, dan toast "Selesai: X dari Y titik". `matched_rules` + `snapshot` + `limitations` dikirim backend tapi belum ditampilkan (blok "Indikasi Tambahan" saat ini mati).
+- Frontend `/documents`: buang `normal`, pakai `trouble_type` untuk kartu angka, area warna di grafik, tabel + tombol Zoom, dan toast "Selesai: X dari Y titik". `matched_rules` + `snapshot` + `limitations` dikirim backend tapi belum ditampilkan (blok "Indikasi Tambahan" saat ini mati). **Catatan refactor 2026-10-19:** endpoint yang dipakai halaman ini (`/documents`, `/telemetry`, `/classification/*`) sudah dihapus; lihat `11` dan `20`.
 - Tim BE: baca `classification.trouble_type` untuk notif sendiri, simpan `rules_version` untuk sinkron ambang. Jangan hardcode `360/410/60` di BE.
 
 ## 4. Contoh

@@ -1,18 +1,19 @@
 # 04 — Alir Data
 
-Satu jalur penilaian: file → pindai → hasil, dengan satu aturan penilaian yang sama.
+> Refactor 2026-10-19: jalur file/CSV dihapus. Satu jalur tersisa: JSON readings
+> → `/v1/classify` → jawaban JSON. Detail migrasi: `20`.
 
-## KELOMPOK — File → Penilaian Murni per-Sampel → Jawaban
+## JSON → Penilaian Murni per-Sampel → Jawaban
 
 ```mermaid
 flowchart LR
-    DS[(TelemetryDataset)] --> Last[Sampel Terakhir\n+ Evidensi]
-    Last --> Engine[Mesin Aturan]
-    Engine --> Resp[ClassificationPipelineResult]
-
-    DS --> Scan[Scan per-sampel\nfull-resolution]
-    Scan --> Engine
+    JSON[JSON readings\n1–40 sampel] --> Order[Urut event-time]
+    Order --> Trim[Evidensi trailing 31\npasca-gap 10 dtk]
+    Trim --> Engine[Mesin Aturan]
+    Engine --> Resp[ClassificationResult]
 ```
 
 - Penilaian murni: pembacaan terakhir + evidensi trailing 31 pasca-gap — tanpa window waktu.
-- Pemindaian: tiap sampel dinilai dengan evidensinya (gap event-time >10 dtk memutus histori), full-resolution tanpa stride; semua titik + titik gangguan disimpan.
+- Waktu kejadian mengikuti `timestamp` sensor, bukan waktu terima; server yang mengurutkan.
+- Data kosong (`null`) tidak diisi nol; gangguan terkait menjadi **tidak terdeteksi** disertai catatan.
+- Jeda event-time > 10 detik memutus histori.

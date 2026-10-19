@@ -1,5 +1,11 @@
 # 11 — Tampilan
 
+> Refactor 2026-10-19: backend Python tidak lagi menyediakan `/documents`,
+> `/normalization`, `/telemetry`, dan `/classification/*`. Halaman `/documents`
+> masih dapat dibuka, tetapi unggah/normalisasi/telemetry/pindai akan gagal
+> (404). Frontend **tidak diubah** pada tahap ini; penyesuaian dilakukan saat
+> migrasi Node.js (`20-migrasi-nodejs.md`).
+
 ## Halaman
 
 - `/` → pindah ke `/documents`.

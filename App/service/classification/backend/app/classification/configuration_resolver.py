@@ -4,17 +4,16 @@ Reference & Setpoint adalah konfigurasi yang dapat diubah user; persamaan
 dan struktur logika klasifikasi tetap milik Classification Engine.
 
 Prioritas per parameter (fallback per kolom, bukan per baris):
-    override pompa (pump_classification_config, non-NULL)
-    -> referensi flowhead (flowheads.references_*, bila ada)
+    override pompa (classification_config, non-NULL)
+    -> referensi flowhead (bila caller menyediakannya)
     -> default profil (rules.json / profile_setpoints.json)
 
 Tidak ada record / kolom NULL = warisi level berikutnya.
 Tidak ada kolom prioritas rule: semua trouble_type setara.
 
 Modul ini MURNI: tanpa I/O database, tanpa state, tanpa thread.
-Pembacaan DB (pump_classification_config, flowheads) adalah tugas
-caller (service / DB ingest worker); resolver hanya menggabungkan
-nilai yang diberikan. Threshold PTS (10/110/100) dan DRY (70%) BUKAN
+Pembacaan DB adalah tugas caller (ingestion terpisah); resolver hanya
+menggabungkan nilai yang diberikan. Threshold PTS (10/110/100) dan DRY (70%) BUKAN
 bagian modul ini — tetap milik rules.json dan dibaca evaluator
 dari rule_def.
 """

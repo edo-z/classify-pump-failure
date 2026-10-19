@@ -8,7 +8,7 @@
 > "gap: sensor mati, tidak ada data" (tanpa interpolasi, tanpa smoothing).
 > Garis putus menandai ambang klasifikasi dari `rules.json`: PTS F≤10 Hz,
 > undervoltage <360 V, overvoltage >410 V, panel ≥60 °C, serta ambang DRY per-tier
-> dari `GET /classification/tier-refs` (0,667×/0,64× referensi tier).
+> (0,667×/0,64× referensi tier).
 > Area berwarna = interval gangguan hasil klasifikasi; simbol pembeda per tipe
 > (segitiga/lingkaran/kotak/diamond/pin) agar terbaca grayscale.
 
@@ -19,8 +19,8 @@
 > shown in the status bar. Gaps >2× median interval are drawn broken and labelled
 > "gap: sensor offline, no data" (no interpolation, no smoothing). Dashed lines
 > mark classification thresholds from `rules.json`: PTS F≤10 Hz, undervoltage
-> <360 V, overvoltage >410 V, panel ≥60 °C, and per-tier DRY thresholds from
-> `GET /classification/tier-refs` (0.667×/0.64× tier reference). Shaded bands are
+> <360 V, overvoltage >410 V, panel ≥60 °C, and per-tier DRY thresholds
+> (0.667×/0.64× tier reference). Shaded bands are
 > classified trouble intervals; per-type symbols keep them readable in grayscale.
 
 ## Versi pendek (keterangan gambar 1 baris)

@@ -8,6 +8,12 @@ RCEA = Root Cause + Effects Analysis (akar + dampak + aksi).
 > Amendemen 2026-10-10: jalur live/MQTT/replay/dummy dihapus total (kode +
 > endpoint + uji + halaman). Baris F1, F6–F8 di bawah adalah **arsip historis**
 > 2026-10-07; kontrol penggantinya ada di §4. Penilaian FMEA pasca-hapus ada di §5.
+>
+> Amendemen 2026-10-19: refactor Opsi D menghapus pipeline CSV/storage, CLI, DB
+> ingest Python, serta test `test_documents_delete`, `test_setpoint_wiring`,
+> `test_ingest_*`, `test_tier_refs`. Referensi wiring/upload/scan di bawah bersifat
+> **historis**. Oracle perilaku engine saat ini: `backend/tests/golden/`
+> (25 skenario) + `tests/test_golden.py`; detail `20-migrasi-nodejs.md`.
 
 ## 1. FMEA per area uji (urut RPN sisa tertinggi)
 

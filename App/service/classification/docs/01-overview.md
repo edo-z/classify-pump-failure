@@ -14,20 +14,16 @@ Layanan Klasifikasi Gangguan Pompa memantau kondisi pompa (penggerak/VSD dan pan
 - **Waktu kejadian mengikuti data.** Waktu yang dipakai adalah waktu yang tercatat pada data sensor itu sendiri, bukan waktu sistem menerimanya.
 - **Data kosong tidak diisi nol.** Sensor yang tidak mengirim dibiarkan kosong dan dilaporkan sebagai data hilang; tidak pernah diganti angka `0`.
 - **Pompa tersangkut sampah langsung diputuskan** begitu polanya terpenuhi (frekuensi ≤ 10 Hz dan minimal 3 dari 4 tanda lain) — tanpa menunggu bukti berulang.
-- **Satu jalur penilaian:**
-  - **Kelompok (batch)** — file dinilai murni per-sampel untuk dipindai menyeluruh.
-  - **API langsung `POST /v1/classify`** — stateless, tanpa CSV, untuk tim BE (mesin sama). Lihat `18` dan `19`.
+- **Satu jalur penilaian:** API langsung `POST /v1/classify` — stateless, tanpa CSV, untuk tim BE (mesin sama). Lihat `18` dan `19`.
+  - Catatan (refactor 2026-10-19): jalur file/CSV (unggah → normalisasi → kelompok) **dihapus** dari backend ini; migrasi Node.js dibahas di `20`.
 
 ## Konteks Sistem
 
 ```mermaid
 flowchart LR
-    CSV[File CSV] --> Storage[Storage Dokumen]
-    Storage --> Normalisasi[Normalisasi]
-    Normalisasi --> DS[(TelemetryDataset)]
-    DS --> Batch[Penilaian Murni]
-    Batch --> Engine[Mesin Aturan]
-    Engine --> FE[Frontend\nDokumen + Chat]
+    JSON[JSON readings] --> V1[POST /v1/classify]
+    V1 --> Engine[Mesin Aturan]
+    Engine --> Resp[ClassificationResult]
 
     classDef pure fill:#dcfce7,stroke:#16a34a
     class Engine pure

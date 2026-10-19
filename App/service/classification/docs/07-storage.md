@@ -11,6 +11,18 @@ Tujuan pembagian:
 - **Jenis gangguan** — `failure_types`.
 - **Riwayat gangguan** — `pump_classifications` (baru disiapkan strukturnya; pencatatan belum diaktifkan).
 
+## Status Implementasi
+
+| Lapisan | Status |
+|---|---|
+| Schema MySQL 7 tabel (`dexmin.sql`) | **Didefinisikan & dipertahankan** sebagai kontrak arsitektur DEXMIN |
+| Ingestion DB Python (`app/ingest_db/`) | **Dihapus** pada refactor 2026-10-19 |
+| Ingestion DB Node.js | **Akan dibangun** pada tahap migrasi (lihat `20-migrasi-nodejs.md`) |
+| Pencatatan `pump_classifications` | **Belum diaktifkan** sampai pembahasan internal selesai |
+
+Penghapusan ingestion Python tidak mengubah desain database. Database production
+tidak disentuh oleh refactor ini.
+
 ## Diagram Relasi
 
 ```mermaid
@@ -219,6 +231,7 @@ Tervalidasi pada database development (container `db-mysql`, MySQL 8.0.46): 7 ta
 
 ## Lihat Juga
 
-- `13-operations.md` — konfigurasi koneksi (`CLASSIFICATION_DB_*`).
+- `13-operations.md` — konfigurasi koneksi (`CLASSIFICATION_DB_*`, untuk tahap migrasi).
 - `06-classification.md` — aturan klasifikasi yang memakai `failure_types.failure`.
+- `20-migrasi-nodejs.md` — rencana ingestion Node.js.
 - Sumber DDL: `Data/db-mysql/dexmin/dexmin.sql`.

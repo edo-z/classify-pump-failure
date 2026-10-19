@@ -4,8 +4,8 @@ from fastapi.middleware.cors import (
 )
 import logging
 
-# 5R/Rawat insiden 2026-10-12: audit DELETE + kunci 409 wajib terlihat
-# di log proses (tanpa ini logger.info app tenggelam — root tanpa handler).
+# 5R/Rawat: log proses wajib terlihat (root tanpa handler membuat
+# logger.info aplikasi tenggelam).
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(name)s: %(message)s",
@@ -13,15 +13,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-from app.api.classification import (
-    router as classification_router,
-)
-from app.api.documents import (
-    router as documents_router,
-)
-from app.api.normalization import (
-    router as normalization_router,
-)
 from app.api.profile_setpoints import router as profile_setpoints_router
 from app.api.v1 import router as v1_router
 from app.api_key import ApiKeyMiddleware
@@ -41,16 +32,6 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-app.include_router(
-    documents_router
-)
-app.include_router(
-    normalization_router
-)
-app.include_router(
-    classification_router
 )
 
 app.include_router(
@@ -100,20 +81,11 @@ def root():
             "Pump Trouble Classification"
         ),
         "interfaces": {
-            "documents": "/documents",
-            "normalization": (
-                "/normalization"
-            ),
-            "classification": (
-                "/classification"
+            "v1": "/v1/classify",
+            "profile_setpoints": (
+                "/profile-setpoints"
             ),
             "health": "/health",
             "docs": "/docs",
         },
     }
-
-
-
-from app.api.telemetry import router as telemetry_router
-
-app.include_router(telemetry_router)
