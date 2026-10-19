@@ -10,6 +10,10 @@ tercatat apa adanya sebagai tidak lengkap — BUKAN auto-normal.
 
 raw_data per baris = fakta teknis + snapshot effective_config, sehingga
 histori tetap bermakna walau setpoint diubah kemudian hari.
+
+Idempoten lintas restart: INSERT memakai ON DUPLICATE KEY UPDATE atas
+unique key (pump_id, failure_type, evaluated_at) — tick yang sama
+menimpa barisnya, bukan menggandakan.
 """
 
 from __future__ import annotations
@@ -67,7 +71,10 @@ _INSERT_SQL = """
 INSERT INTO raw_classifications
   (pump_id, failure_type, evaluated_at, is_triggered, raw_data)
 VALUES (%(pump_id)s, %(failure_type)s,
-        %(evaluated_at)s, %(is_triggered)s, %(raw_data)s)
+        %(evaluated_at)s, %(is_triggered)s, %(raw_data)s) AS new
+ON DUPLICATE KEY UPDATE
+  is_triggered = new.is_triggered,
+  raw_data     = new.raw_data
 """
 
 
