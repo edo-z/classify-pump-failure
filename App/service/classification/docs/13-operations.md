@@ -17,6 +17,10 @@ CLASSIFICATION_NORMALIZED_DIR=/home/aldo/Documents/Agent-Maintenance/Data/classi
 
 Data tersimpan: file mentah, info file, dan data siap nilai. Hapus file memindahkan semuanya ke `.trash/` (bisa dikembalikan manual), bukan unlink permanen — insiden 2026-10-12.
 
+## Penyimpanan (MySQL)
+
+Skema 7 tabel, relasi, seed gangguan, dan contoh query: `07-storage.md`. Sumber tunggal DDL: `Data/db-mysql/dexmin/dexmin.sql`. Koneksi via `CLASSIFICATION_DB_HOST/PORT/USER/PASSWORD/NAME` (default `127.0.0.1:3306`, db `dexmin`) di `backend/.env.example`.
+
 Backend produksi jalan via systemd (`classify-pump-backend.service`, Restart=always). Jangan start manual via nohup — kalah balapan port. Restart resmi + audit hapus:
 
 ```bash
