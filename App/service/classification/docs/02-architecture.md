@@ -1,30 +1,34 @@
 # 02 — Susunan Sistem
 
 > Refactor 2026-10-19: backend Python dirampingkan menjadi **engine + API stateless**.
-> Pipeline CSV/storage, CLI, dan DB ingest Python dihapus. Detail migrasi: `20`.
+> Pipeline CSV/storage, CLI, dan DB ingest Python dihapus.
+> Cutover 2026-10-20: implementasi berpindah ke **Node.js (TypeScript + Fastify)**;
+> kode Python dihapus, perilakunya dibekukan sebagai fixture golden + differential.
+> Detail migrasi: `20`.
 
 ## Struktur Program Backend
 
 ```
-backend/app/
-  main.py                 # Titik masuk layanan web
-  api_key.py              # Middleware X-API-Key
+backend-node/src/
+  server.ts                 # Titik masuk layanan web (Fastify)
+  middleware/apiKey.ts      # Gerbang X-API-Key (exact-match exempt + timing-safe)
   api/
-    classify.py           # POST /classify (kontrak stabil)
-    profile_setpoints.py  # Ubah acuan tiap pompa
-  classification/
-    engine.py             # Aturan penilaian (orkestrator)
-    engine_support.py     # T_A MA30/CMA_n, freq_eq_2dp, helper
-    evaluator.py          # 8 aturan + panel/unbalance/voltage
-    evidence.py           # Trailing 31 pasca-gap
-    models.py             # Bentuk data masuk & keluar
-    profiles.py           # Kapasitas per profil
-    setpoints.py          # override > profil
-    configuration_resolver.py
-    service.py            # Factory get_engine()
-    rules.json            # Batas tiap ukuran pompa + aturan tegangan
-    pump_profiles.json    # Profil 500 / 3000 / 5000 lps
+    classify.ts             # POST /classify (kontrak stabil)
+    profileSetpoints.ts     # Baca/ubah acuan tiap pompa (merge semantics)
+  engine/
+    engine.ts               # Aturan penilaian (orkestrator)
+    support.ts              # T_A MA30/CMA_n, freq_eq_2dp, helper
+    evaluator.ts            # 8 aturan + panel/unbalance/voltage
+    evidence.ts             # Trailing 31 pasca-gap
+    models.ts               # Bentuk data masuk & keluar
+    profiles.ts             # Kapasitas per profil
+    setpoints.ts            # override > profil
+    configuration-resolver.ts
+    service.ts              # Factory getEngine()
+    rules.json              # Batas tiap ukuran pompa + aturan tegangan
+    pump_profiles.json      # Profil 500 / 3000 / 5000 lps
     profile_setpoints.json# Frekuensi / kecepatan / torsi per profil
+  util/                     # format Python, timestamp ber-zona, JSON
 ```
 
 ## Struktur Tampilan (Frontend) — di luar scope refactor
@@ -50,7 +54,7 @@ frontend/src/app/
 | `classification` | Data → hasil (pembacaan terakhir; data hilang = tidak terdeteksi + catatan) | Tidak tahu tampilan/disk/DB |
 | `api/classify` | Penghubung web single-shot | Tidak mengandung logika aturan |
 | `api/profile_setpoints` | Baca/ubah acuan profil | Tidak mengandung logika aturan |
-| `service.py` | Factory `get_engine()` | Tanpa CSV/FS/MySQL; tanpa duplikasi rumus |
+| `service.ts` | Factory `getEngine()` | Tanpa CSV/FS/MySQL; tanpa duplikasi rumus |
 
 ## Diagram Komponen
 

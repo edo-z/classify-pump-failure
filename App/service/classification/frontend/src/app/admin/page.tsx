@@ -148,7 +148,7 @@ export default function AdminPage() {
               </div>
 
               <p style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: "0.5rem" }}>
-                File: <code>backend/app/classification/profile_setpoints.json</code> — load langsung di sana, tidak perlu memasukkan default lagi.
+                File: <code>backend-node/src/engine/profile_setpoints.json</code> — load langsung di sana, tidak perlu memasukkan default lagi.
               </p>
             </div>
           );

@@ -12,8 +12,12 @@ RCEA = Root Cause + Effects Analysis (akar + dampak + aksi).
 > Amendemen 2026-10-19: refactor Opsi D menghapus pipeline CSV/storage, CLI, DB
 > ingest Python, serta test `test_documents_delete`, `test_setpoint_wiring`,
 > `test_ingest_*`, `test_tier_refs`. Referensi wiring/upload/scan di bawah bersifat
-> **historis**. Oracle perilaku engine saat ini: `backend/tests/golden/`
-> (25 skenario) + `tests/test_golden.py`; detail `20-migrasi-nodejs.md`.
+> **historis**. Oracle perilaku engine saat ini: `backend-node/test/golden/`
+> (25 skenario) + `backend-node/test/differential/frozen.json`; detail `20-migrasi-nodejs.md`.
+>
+> Amendemen 2026-10-20 (cutover): backend Node.js mengambil alih `:3031`, kode
+> Python **dihapus** (tag `pre-python-removal`). Semua path `backend/…` dan
+> `pytest` di §1–§6 adalah **arsip historis**; penilaian & remediasi terkini di §7.
 >
 > Amendemen 2026-10-19 (5R/Rapi — hapus penamaan versi): `POST /v1/classify` →
 > `POST /classify`; `app/api/v1.py` → `classify.py`; tipe `V1*` → `Classify*`;
@@ -156,3 +160,134 @@ berdampingan. Lokasi config: `frontend/e2e.config.ts` (bun; deps `e2e`, `ai@^7`,
 - **5 Whys:** (1) Mengapa timeout? 1 model call >30s. (2) Mengapa lama? layar 206 node + 151 opsi dropdown. (3) Mengapa default 30s? `judgmentTimeout` default agent. (4) Mengapa tak terlihat di wiring? wiring hanya `generateText` (tanpa observasi layar). (5) Akar: budget judgment tak disesuaikan ke model lambat.
 - **Korektif:** `judgmentTimeout: 120_000` di `agents.default`.
 - **Preventif:** aturan "model baru wajib uji extract di layar terberat dulu" + catat warning `responseFormat` (E3) sebagai sinyal D.
+
+## 7. Amendemen 2026-10-20 — shadow Node.js, FMEA + RCA
+
+> **Pasca-amendemen (cutover 2026-10-20):** Node mengambil alih `:3031`
+> (`classify-pump-node`, enabled) dan service Python dimatikan + kode Python
+> **dihapus** (tag `pre-python-removal`). Oracle paritas kini beku di
+> `backend-node/test/differential/frozen.json` (400 kasus + respons Python).
+> §7.1–§7.3 di bawah adalah catatan saat Python masih hidup.
+
+Lingkungan (saat pengujian): Python produksi `:3031` (tetap), Node shadow `:3032`
+(`classify-pump-node.service`, 127.0.0.1), instance uji terisolasi `:3033`
+(API-key aktif) dan `:3035` (Python pembanding). Tidak ada cutover.
+
+### 7.1 Bukti pengujian
+
+| Uji | Hasil |
+|---|---|
+| Golden (25) + differential (400) + adversarial (32) via HTTP | 457 kasus; **3 selisih**, semuanya coercion adversarial (bukan input produksi) |
+| Boundary HTTP (14 kasus: voltage 360/410, DRY 40.004/40.005, torque 70, panel 60, unbalance, PTS 10) | **14/14 sama** |
+| Konkurensi 150 request (3 namespace berbeda) | **150/150 sama**, tanpa kebocoran |
+| Urutan readings (sorted vs shuffled) | identik; evidence 31 |
+| Gap event-time (40 sampel, jeda 1 jam) | evidence 10, sama dengan Python |
+| Beban 2×3000 request | 0 error; RSS 30→44 MB lalu **plateau** (±44 MB) |
+| `npm test` / `tsc` | 68/68 hijau; typecheck bersih |
+| Hash 3 JSON setelah semua uji | tidak berubah |
+| Latensi (457 kasus) | Node p50 3.1 ms / p95 8.3 ms; Python 5.3 / 12.4 ms |
+
+### 7.2 FMEA (urut RPN)
+
+| # | Failure mode | Bukti | S | O | D | RPN | Mitigasi → status/sisa |
+|---|---|---|---|---|---|---|---|
+| S1 | `PUT /profile-setpoints` menerima non-finite (`"Infinity"`, `1e999`) → file berisi `Infinity` → `JSON.parse` gagal → **semua** `/classify` + setpoint 500 | terkonfirmasi `:3034` | 9 | 1 | 2 | **18** | ✅ **SELESAI** — `Number.isFinite` di `coerceGe0`/`coerceFloat` + guard `saveProfileSetpoint`; PUT `Infinity`/`1e999` → 422, hash file tidak berubah |
+| S3 | PUT parsial (`{"frequency_hz":41}`) menimpa `rpm`/`torque` jadi `null` → kehilangan konfigurasi senyap | terkonfirmasi | 6 | 2 | 2 | **24** | ✅ **SELESAI** — semantik merge: field absen = pertahankan, `null` eksplisit = hapus |
+| S2 | API produksi **terbuka tanpa key** & terekspos publik (`class-api.aldozeno.my.id` → GET setpoints 200); exemption prefix lebar; tanpa rate limit; banding key non-constant-time | curl publik read-only | 9 | 3 | 2 | **54** | ⚠️ **sebagian** — exemption exact-match + `timingSafeEqual` (sha256) selesai; **mengaktifkan key menunggu keputusan FE/tunnel** |
+| S4 | Timestamp invalid diterima 200 dan dinormalisasi: `2026-02-30`, `24:00`, offset `+25:00` | terkonfirmasi | 5 | 1 | 2 | **10** | ✅ **SELESAI** — validasi kalender/offset penuh → 422 (paritas Python 8/8) |
+| S5 | Error 500 membocorkan konteks internal/isi file (`Unexpected token 'I', ...ency_hz": Infinity`) | terkonfirmasi | 4 | 1 | 2 | **8** | ✅ **SELESAI** — 500 generik + `console.error`; health tidak membocorkan isi file |
+| S6 | Serialisasi waktu beda: UTC `+00:00` vs Python `Z`; fraksi `.123` vs `.123000`, `.123456789` dipotong 6 digit | terkonfirmasi | 3 | 1 | 2 | **6** | ✅ **SELESAI** — fraksi dinormalisasi 6 digit, UTC → `Z`; paritas 8/8 |
+| S7 | Coercion lebih ketat dari Python: `true` (bool), `"NaN"`, timestamp angka, `1e999` → Node 422, Python 200 | terkonfirmasi | 3 | 2 | 2 | **12** | **Diterima sebagai hardening** — input non-finite/boolean bukan kontrak produksi; didokumentasikan (4 selisih adversarial di replay) |
+| S8 | Semantik HTTP beda: `GET /classify` 404 vs 405; `POST /classify/` 404 vs 307; `HEAD /health` 200 vs 405; `OPTIONS` 204 vs 405 | terkonfirmasi | 2 | 3 | 2 | **12** | **Didokumentasikan** — tidak dipakai FE/klien; align bila ada kebutuhan |
+
+Catatan: S1 adalah **regresi port** — Python menulis `Infinity` juga, tetapi
+`json.loads` Python menerimanya; Node memakai `JSON.parse` yang strict.
+
+### 7.3 RCA
+
+#### RCA-S1 — config poisoning non-finite (RPN 162)
+
+- **5 Whys:** (1) Mengapa semua endpoint 500? `load_profile_setpoints` melakukan
+`JSON.parse` file yang berisi `Infinity`. (2) Mengapa file berisi `Infinity`?
+`pyJsonDumps` sengaja meniru `json.dumps` (menulis `Infinity`). (3) Mengapa nilai
+non-finite lolos? `coerceGe0` hanya memeriksa `NaN` dan `>= 0`; `Infinity` lolos.
+(4) Mengapa tidak terdeteksi? Tidak ada uji PUT non-finite; golden hanya classify.
+(5) **Akar:** paritas serializer Python diterapkan tanpa paritas loader Python
+(`loads` permisif vs `JSON.parse` strict), dan tidak ada invariant "file harus
+selalu JSON valid".
+- **Dampak:** satu request PUT (tanpa auth) mematikan klasifikasi sampai file
+diperbaiki manual; pada cutover ini jalur publik.
+- **Korektif:** tolak non-finite di `coerceGe0`; tambah uji PUT `Infinity`/`1e999`
+dan uji "file tetap valid setelah PUT".
+- **Preventif:** invariant loader/validator (`Number.isFinite`), property test
+PUT→GET→classify, dan health check yang mem-parse file setpoint.
+
+#### RCA-S3 — PUT parsial menghapus field (RPN 120)
+
+- **5 Whys:** (1) Mengapa `rpm`/`torque` hilang? Body parsial diisi `null`.
+(2) Mengapa `null` disimpan? `parseUpdate` memetakan field absen → `null` lalu
+`saveProfileSetpoint` menimpa seluruh objek. (3) Mengapa desain begitu? Model
+update Python memakai default `None` + `model_dump()` penuh. (4) Mengapa tidak
+terlihat? Tidak ada uji semantik PUT parsial. (5) **Akar:** kontrak PUT ambigu
+(replace vs merge) dan model update tidak membedakan "absen" dari "null".
+- **Korektif:** wajibkan ketiga field (422 bila absen) **atau** merge dengan
+nilai lama; pilih satu dan selaraskan Python + FE.
+- **Preventif:** uji kontrak PUT (parsial, null eksplisit, 0, non-finite) di
+kedua implementasi.
+
+#### RCA-S2 — API publik tanpa autentikasi (RPN 90)
+
+- **5 Whys:** (1) Mengapa publik bisa membaca setpoints? API key kosong → gate
+terbuka. (2) Mengapa kosong? Unit systemd tidak menyetel `CLASSIFICATION_API_KEY`;
+mode DEV menjadi default produksi. (3) Mengapa terekspos? Tunnel Cloudflare
+memetakan `class-api.aldozeno.my.id` → `:3031`. (4) Mengapa lolos? FMEA FM1
+(RPN 504) sudah mencatat, remediasi ditunda. (5) **Akar:** default insecure
+(open-by-default) + eksposur publik tanpa gerbang deploy.
+- **Korektif segera:** set key di unit produksi + FE, verifikasi 401 tanpa key;
+pertimbangkan Cloudflare Access untuk `/profile-setpoints` dan PUT.
+- **Preventif:** exemption exact-match (bukan `startsWith`), rate limit, dan
+checklist go-live yang menolak API key kosong di lingkungan publik.
+
+#### RCA-S4 — validasi timestamp terlalu longgar (RPN 90)
+
+- **5 Whys:** (1) Mengapa `2026-02-30` diterima? Regex hanya memeriksa bentuk.
+(2) Mengapa jadi 2 Maret? `Date.UTC` menormalkan tanggal di luar rentang.
+(3) Mengapa offset `+25:00` diterima? Jam/menit offset tidak divalidasi.
+(4) Mengapa tidak ketahuan? Uji hanya timestamp valid + naive.
+(5) **Akar:** parsing manual berbasis `Date` tanpa validasi round-trip.
+- **Korektif:** validasi komponen (bulan 1–12, hari sesuai bulan, jam 0–23,
+menit/detik 0–59, offset ≤ 14:00) atau round-trip bandingkan komponen.
+- **Preventif:** tabel uji timestamp invalid (tanggal, jam, offset, kabisat).
+
+### 7.4 Remediasi diterapkan (2026-10-20)
+
+Semua temuan kode sudah diperbaiki di `backend-node` dan diverifikasi ulang:
+
+| Temuan | Perubahan kode | Bukti verifikasi |
+|---|---|---|
+| S1 | `coerceFloat`/`coerceGe0` menolak `!Number.isFinite`; `saveProfileSetpoint` menolak non-finite sebelum menulis | PUT `"Infinity"` & `1e999` → 422; hash file tetap; `classify` berikutnya 200 |
+| S3 | `parseUpdate(raw, current)`: field absen → nilai lama, `null` eksplisit → hapus | PUT `{"frequency_hz":41}` → `{41, 990, 90}`; `rpm:null` hanya menghapus `rpm` |
+| S2 | `EXEMPT_EXACT` (`/`, `/health`, `/docs`, `/openapi.json`, `/redoc`); banding key `timingSafeEqual(sha256)` | `/healthz` 401, `/health` 200, `/classify` tanpa key 401, key benar 200 |
+| S4 | `parseIso` memvalidasi tahun/bulan/hari/kabisat/jam/menit/detik/offset; `setUTCFullYear` untuk tahun < 100 | 8/8 timestamp sama dengan Python (valid & invalid) |
+| S5 | Error ≥500 → `{detail:"Internal Server Error"}` + log internal; `/health` hanya `invalid JSON`/`unreadable` | Route uji berisi "secret" → 500 generik; file rusak → 500 generik + health `degraded` |
+| S6 | Fraksi → 6 digit; UTC → `Z`; offset non-UTC dipertahankan | `.123` → `.123000`, `.123456789` → `.123456`, `+00:00` → `Z` |
+| Tambahan | `/health` melaporkan `setpoints_exists/loaded/error` | health `:3032` menunjukkan `setpoints_loaded:true` |
+
+Regresi: `npm test` **82/82**, `tsc --noEmit` bersih, differential **400/400**,
+replay shadow **457 kasus → 0 selisih pada input valid** (4 selisih hanya
+coercion adversarial S7). Hash 3 JSON tetap identik.
+
+**Pre-flight cutover:** file setpoint dipastikan `JSON.parse`-able (tidak
+tercemar `Infinity`); bila tercemar, Node jujur melaporkan `degraded`/500
+(tidak menulis ulang diam-diam).
+
+### 7.5 Status pasca-cutover (2026-10-20)
+
+1. **Selesai:** Node di `:3031` (`classify-pump-node`, enabled), Python
+   dimatikan + unit dihapus + kode Python dihapus (tag `pre-python-removal`).
+   Oracle paritas beku: `test/golden/` (25) + `test/differential/frozen.json`
+   (400, dijalankan `npm test`). Smoke publik `/health` + `/classify` → 200.
+2. **Keputusan tersisa:** aktivasi `CLASSIFICATION_API_KEY` di produksi
+   (butuh injeksi key di Next rewrite atau Cloudflare Access; tanpa itu FE dan
+   klien tunnel akan 401).
+3. S7/S8 diterima sebagai hardening/dokumentasi.

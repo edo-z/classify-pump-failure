@@ -1,19 +1,19 @@
-# 16 — Deploy Cloudflare Tunnel `classify-pump` (live 2026-10-07)
+# 16 — Deploy Cloudflare Tunnel `classify-pump` (live 2026-10-07; backend cutover ke Node 2026-10-20)
 
 Mapping: `classify.aldozeno.my.id` → `localhost:3030` (frontend),
-`class-api.aldozeno.my.id` → `localhost:3031` (backend, uvicorn workers 1).
+`class-api.aldozeno.my.id` → `localhost:3031` (backend Node.js, 1 proses).
 Mesin 24/7 + linger aktif.
 
 ## Komponen
 - `~/.cloudflared/config.yml` (tunnel `classify-pump`, catch-all 404)
-- `backend/.env` (JANGAN commit; `CLASSIFICATION_API_KEY`)
-- systemd user: `classify-pump-backend`, `classify-pump-frontend`
+- `backend-node/.env.example` → `CLASSIFICATION_API_KEY` (JANGAN commit `.env` asli)
+- systemd user: `classify-pump-node`, `classify-pump-frontend`
   (`CLASSIFICATION_BACKEND_URL=http://127.0.0.1:3031`), `classify-pump-tunnel`
 
 ## Operasi
-- Status: `systemctl --user status classify-pump-{backend,frontend,tunnel}`
+- Status: `systemctl --user status classify-pump-{node,frontend,tunnel}`
 - Log: `journalctl --user -u classify-pump-tunnel -f`
-- Restart: `systemctl --user restart classify-pump-{backend,frontend}`
+- Restart: `systemctl --user restart classify-pump-{node,frontend}`
 - Rollback: `systemctl --user stop classify-pump-tunnel` (lokal tetap jalan)
 - Frontend rebuild setelah update kode: `bun run build` di `frontend/`,
   lalu restart `classify-pump-frontend`

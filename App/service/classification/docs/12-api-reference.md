@@ -1,11 +1,13 @@
 # 12 — Daftar Antarmuka (API)
 
-Alamat dasar `http://127.0.0.1:3031` lewat penerus `/api/*`. Dokumentasi interaktif di `GET /docs`.
+Alamat dasar `http://127.0.0.1:3031` lewat penerus `/api/*`.
 
 CORS backend: `allow_origins=["*"]` dengan `allow_credentials=False`, `allow_methods/headers=["*"]`.
 
 > Refactor 2026-10-19: hanya endpoint di bawah yang aktif. Endpoint berbasis
-> file/CSV dihapus (lihat bagian akhir). Target migrasi Node.js: `20-migrasi-nodejs.md`.
+> file/CSV dihapus (lihat bagian akhir).
+> Cutover 2026-10-20: backend Node.js (Fastify) menggantikan Python di `:3031`;
+> tidak ada `GET /docs` (Swagger tidak disediakan). Detail: `20-migrasi-nodejs.md`.
 
 ## Kesehatan & Akar
 
@@ -16,11 +18,14 @@ CORS backend: `allow_origins=["*"]` dengan `allow_credentials=False`, `allow_met
   "status": "ok",
   "rules_exists": true,
   "rules_loaded": true,
-  "rules_error": null
+  "rules_error": null,
+  "setpoints_exists": true,
+  "setpoints_loaded": true,
+  "setpoints_error": null
 }
 ```
 
-`degraded` bila rules tidak loaded.
+`degraded` bila rules tidak loaded atau file setpoint tidak bisa di-parse.
 
 ### Akar — `GET /`
 
@@ -30,8 +35,7 @@ CORS backend: `allow_origins=["*"]` dengan `allow_credentials=False`, `allow_met
   "interfaces": {
     "classify": "/classify",
     "profile_setpoints": "/profile-setpoints",
-    "health": "/health",
-    "docs": "/docs"
+    "health": "/health"
   }
 }
 ```
@@ -54,6 +58,8 @@ Batas: 1–40 readings; timestamp wajib ber-zona waktu (422 bila naive); profil 
 ## Acuan Pompa
 
 ### Lihat & ubah — `GET /profile-setpoints`, `GET /profile-setpoints/{id}`, `PUT /profile-setpoints/{id}` `{frequency_hz,rpm,torque}` (torsi dalam %)
+
+PUT bersifat **merge**: field yang tidak dikirim dipertahankan; `null` eksplisit menghapus field. Nilai harus finite dan ≥ 0 (`422` bila tidak).
 
 ```json
 { "500_lps": {"frequency_hz":35,"rpm":900,"torque":70}, "5000_lps": {"frequency_hz":40,"rpm":990,"torque":90} }
