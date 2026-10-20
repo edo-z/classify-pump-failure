@@ -49,6 +49,30 @@ jobs:
             | head -c 200
           echo
 
+  landing-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: App/service/classification/landing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node --check serve.mjs
+      - name: Start landing and smoke test
+        run: |
+          node serve.mjs &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:3030/healthz && break
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:3030/ | grep -q "Pump Trouble Classification"
+          curl -fsS http://127.0.0.1:3030/styles.css | grep -q -- "--accent"
+          curl -fsS http://127.0.0.1:3030/app.js | grep -q "API_HEALTH"
+
   frontend:
     runs-on: ubuntu-latest
     steps:
