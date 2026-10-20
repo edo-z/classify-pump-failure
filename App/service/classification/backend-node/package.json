@@ -1,0 +1,26 @@
+{
+  "name": "classification-backend-node",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node.js (TypeScript + Fastify) behavioral-equivalent port of the Python classification engine.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "start": "node src/server.ts",
+    "test": "node --test test/unit/ test/golden/ test/differential/",
+    "test:unit": "node --test test/unit/",
+    "test:golden": "node --test test/golden/",
+    "test:differential": "node --test test/differential/"
+  },
+  "dependencies": {
+    "decimal.js": "^10.4.3",
+    "fastify": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}

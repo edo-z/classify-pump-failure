@@ -1,0 +1,114 @@
+{
+  "profile_id": "5000_lps",
+  "namespace": "golden-turb-ma30",
+  "evidence_size": 31,
+  "classification": {
+    "pump_id": 5000,
+    "timestamp": "2026-10-19T10:00:30+07:00",
+    "trouble_type": "turbulensi",
+    "matched_rules": [
+      {
+        "trouble_type": "turbulensi",
+        "matched_conditions": [
+          "freq=39.0 < setpoint 40.0",
+          "power=450.0 >= 400",
+          "current=615.0 vs MA30550.0 \u0394+65.0 |\u0394|65.0>=10",
+          "torque=95.0 >= 90%"
+        ],
+        "total_conditions": 4
+      }
+    ],
+    "sensor_snapshot": {
+      "output_frequency": 39.0,
+      "output_power": 450.0,
+      "motor_current": 615.0,
+      "motor_torque": 95.0,
+      "motor_speed": 990.0,
+      "ambient_temperature": 30.0,
+      "control_board_temperature": 40.0,
+      "inverter_temperature": 45.0,
+      "input_voltage": 380.0
+    },
+    "readings_count": 31,
+    "limitations": [],
+    "evaluation_status": "FULL",
+    "rule_evaluations": [
+      {
+        "trouble_type": "pompa_tersangkut_sampah",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [
+          "power=450.0 >= 400",
+          "speed=990.0 >= 100"
+        ],
+        "total_conditions": 5
+      },
+      {
+        "trouble_type": "turbulensi",
+        "capability_status": "READY",
+        "evaluation": "MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [
+          "freq=39.0 < setpoint 40.0",
+          "power=450.0 >= 400",
+          "current=615.0 vs MA30550.0 \u0394+65.0 |\u0394|65.0>=10",
+          "torque=95.0 >= 90%"
+        ],
+        "total_conditions": 4
+      },
+      {
+        "trouble_type": "banyak_sampah",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [
+          "output_frequency=39.0 <= setpoint 40.0",
+          "output_power=450.0 >= 400",
+          "motor_torque=95.0 >= 90"
+        ],
+        "total_conditions": 4
+      },
+      {
+        "trouble_type": "dry_run",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 4
+      },
+      {
+        "trouble_type": "panel_overheat",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 3
+      },
+      {
+        "trouble_type": "unbalance",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 1
+      },
+      {
+        "trouble_type": "undervoltage",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 1
+      },
+      {
+        "trouble_type": "overvoltage",
+        "capability_status": "READY",
+        "evaluation": "NO_MATCH",
+        "missing_requirements": [],
+        "matched_conditions": [],
+        "total_conditions": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "3000_lps": {
+    "frequency_hz": 38.0,
+    "rpm": 950.0,
+    "torque": 80.0
+  },
+  "5000_lps": {
+    "frequency_hz": 40.0,
+    "rpm": 990.0,
+    "torque": 90.0
+  },
+  "500_lps": {
+    "frequency_hz": 46.1,
+    "rpm": 900.0,
+    "torque": 70.0
+  }
+}
