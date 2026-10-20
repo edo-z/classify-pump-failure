@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEXMIN — Pump Trouble Classification</title>
+    <meta
+      name="description"
+      content="Klasifikasi gangguan pompa dari data sensor melalui satu endpoint API single-shot."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">DEXMIN</span>
+        </a>
+        <span class="brand-sub">Pump Trouble Classification</span>
+      </header>
+
+      <main>
+        <section class="hero">
+          <p class="eyebrow">Condition monitoring · single-shot API</p>
+          <h1>Klasifikasi gangguan pompa dari data sensor.</h1>
+          <p class="lede">
+            Kirim satu batch pembacaan sensor, terima diagnosis yang dapat
+            diaudit: jenis gangguan, aturan yang cocok, bukti, dan kondisi yang
+            belum terpenuhi.
+          </p>
+          <div class="actions">
+            <a
+              class="button button-primary"
+              href="https://class-api.aldozeno.my.id/health"
+              rel="noreferrer"
+              >Lihat status API</a
+            >
+            <a
+              class="button"
+              href="https://class-api.aldozeno.my.id/"
+              rel="noreferrer"
+              >Basis API</a
+            >
+          </div>
+        </section>
+
+        <section class="panel status-panel" aria-labelledby="status-title">
+          <div class="panel-head">
+            <h2 id="status-title">Status layanan</h2>
+            <span class="status-pill" data-state="loading" id="status-pill">
+              <span class="dot" aria-hidden="true"></span>
+              <span id="status-text">Memeriksa…</span>
+            </span>
+          </div>
+          <dl class="status-grid">
+            <div>
+              <dt>Aturan klasifikasi</dt>
+              <dd id="rules">—</dd>
+            </div>
+            <div>
+              <dt>Acuan setpoint</dt>
+              <dd id="setpoints">—</dd>
+            </div>
+            <div>
+              <dt>Terakhir diperiksa</dt>
+              <dd id="checked">—</dd>
+            </div>
+          </dl>
+          <p class="status-note">
+            Sumber: <code>GET /health</code> pada
+            <code>class-api.aldozeno.my.id</code>.
+          </p>
+        </section>
+
+        <section class="outcomes" aria-labelledby="outcomes-title">
+          <div class="section-head">
+            <h2 id="outcomes-title">Hasil klasifikasi</h2>
+            <p>Delapan pola gangguan dan satu kondisi normal.</p>
+          </div>
+          <ul class="chips">
+            <li>Pompa tersangkut sampah</li>
+            <li>Turbulensi</li>
+            <li>Banyak sampah</li>
+            <li>Dry run</li>
+            <li>Unbalance</li>
+            <li>Undervoltage</li>
+            <li>Overvoltage</li>
+            <li>Panel overheat</li>
+            <li class="chip-normal">Normal</li>
+          </ul>
+        </section>
+
+        <section class="panel api-panel" aria-labelledby="api-title">
+          <div class="panel-head">
+            <h2 id="api-title">Untuk tim integrasi</h2>
+          </div>
+          <p>
+            Kontrak stabil: <code>POST /classify</code> dengan
+            <code>profile_id</code>, <code>namespace</code>, dan 1–40
+            <code>readings</code> bertimestamp ber-zona waktu. Stateless, tanpa
+            CSV, tanpa sesi.
+          </p>
+          <p class="muted">
+            Aplikasi web internal dinonaktifkan. Kode antarmuka disimpan sebagai
+            library di repositori; halaman ini adalah titik masuk publik.
+          </p>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>DEXMIN · Pump Trouble Classification</span>
+        <span class="muted">API: class-api.aldozeno.my.id</span>
+      </footer>
+    </div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
