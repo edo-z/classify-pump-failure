@@ -1,0 +1,1458 @@
+{
+  "schema": 1,
+  "profile_id": "5000_lps",
+  "profile_label": "5000 lps",
+  "default_case": "pompa_tersangkut_sampah",
+  "rule_version": "1.1",
+  "source": {
+    "rules": "backend-node/src/engine/rules.json",
+    "setpoints": "backend-node/src/engine/profile_setpoints.json",
+    "cases": "backend-node/test/golden",
+    "captured": "2026-10-19"
+  },
+  "rules": [
+    {
+      "order": 1,
+      "id": "pompa_tersangkut_sampah",
+      "name": "Pompa tersangkut sampah",
+      "logic": "Frekuensi rendah plus minimal tiga dari empat tanda beban. Diperiksa pertama.",
+      "thresholds": [
+        "Frekuensi ≤ 10 Hz",
+        "Daya ≥ 400 kW",
+        "Arus ≥ 867 A",
+        "Torsi ≥ 110%",
+        "Putaran ≥ 100 RPM"
+      ]
+    },
+    {
+      "order": 2,
+      "id": "turbulensi",
+      "name": "Turbulensi",
+      "logic": "Frekuensi tidak mencapai setpoint dan arus menyimpang dari rata-rata historis.",
+      "thresholds": [
+        "Frekuensi < setpoint 40 Hz",
+        "Daya ≥ 400 kW",
+        "|Arus − MA30| ≥ 10 A",
+        "Torsi ≥ 90%"
+      ]
+    },
+    {
+      "order": 3,
+      "id": "banyak_sampah",
+      "name": "Banyak sampah",
+      "logic": "Frekuensi tertahan di setpoint dengan daya, arus, dan torsi di atas acuan.",
+      "thresholds": [
+        "Frekuensi ≤ setpoint 40 Hz",
+        "Daya ≥ 400 kW",
+        "Arus ≥ 867 A",
+        "Torsi ≥ 90%"
+      ]
+    },
+    {
+      "order": 4,
+      "id": "dry_run",
+      "name": "Dry run",
+      "logic": "Frekuensi tepat di setpoint, tetapi daya, arus, dan torsi berada di bawah beban normal.",
+      "thresholds": [
+        "Frekuensi = setpoint 40 Hz, 2 desimal",
+        "Daya ≤ 266,8 kW",
+        "Arus ≤ 554,88 A",
+        "Torsi < 70%"
+      ]
+    },
+    {
+      "order": 5,
+      "id": "panel_overheat",
+      "name": "Panel overheat",
+      "logic": "Suhu panel di atas ambang pada salah satu dari tiga titik ukur.",
+      "thresholds": [
+        "Ambient ≥ 60 °C",
+        "Control board ≥ 60 °C",
+        "Inverter ≥ 60 °C"
+      ]
+    },
+    {
+      "order": 6,
+      "id": "unbalance",
+      "name": "Unbalance",
+      "logic": "Satu fase menyimpang dari rata-rata arus tiga fase. Tidak memakai riwayat.",
+      "thresholds": [
+        "Deviasi fasa maksimum ≥ 10%"
+      ]
+    },
+    {
+      "order": 7,
+      "id": "undervoltage",
+      "name": "Undervoltage",
+      "logic": "Tegangan masukan berada di bawah batas operasi.",
+      "thresholds": [
+        "Tegangan < 360 V"
+      ]
+    },
+    {
+      "order": 8,
+      "id": "overvoltage",
+      "name": "Overvoltage",
+      "logic": "Tegangan masukan berada di atas batas operasi.",
+      "thresholds": [
+        "Tegangan > 410 V"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "normal",
+      "label": "Normal",
+      "short": "Normal",
+      "metric": "39 Hz · 200 A",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-normal",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 200,
+            "motor_torque": 40,
+            "output_power": 100,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 100
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "normal",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [],
+        "sensor_snapshot": {
+          "output_frequency": 39,
+          "output_power": 100,
+          "motor_current": 200,
+          "motor_torque": 40,
+          "motor_speed": 990,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 380
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=200.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "pompa_tersangkut_sampah",
+      "label": "Pompa tersangkut sampah",
+      "short": "Tersangkut sampah",
+      "metric": "8 Hz · 900 A",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-pts",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 200,
+            "output_frequency": 8,
+            "motor_current": 900,
+            "motor_torque": 115,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 100
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "pompa_tersangkut_sampah",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "matched_conditions": [
+              "freq=8.0 <=10",
+              "power=450.0 >= 400",
+              "current=900.0 >= 867",
+              "torque=115.0 >= 110%",
+              "speed=200.0 >= 100"
+            ],
+            "total_conditions": 5
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "matched_conditions": [
+              "output_frequency=8.0 <= setpoint 40.0",
+              "output_power=450.0 >= 400",
+              "motor_current=900.0 >= 867",
+              "motor_torque=115.0 >= 90"
+            ],
+            "total_conditions": 4
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 8,
+          "output_power": 450,
+          "motor_current": 900,
+          "motor_torque": 115,
+          "motor_speed": 200,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 380
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=900.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "banyak_sampah",
+      "label": "Banyak sampah",
+      "short": "Banyak sampah",
+      "metric": "39 Hz · 900 A",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-bs",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 900,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 100
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "banyak_sampah",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "banyak_sampah",
+            "matched_conditions": [
+              "output_frequency=39.0 <= setpoint 40.0",
+              "output_power=450.0 >= 400",
+              "motor_current=900.0 >= 867",
+              "motor_torque=95.0 >= 90"
+            ],
+            "total_conditions": 4
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 39,
+          "output_power": 450,
+          "motor_current": 900,
+          "motor_torque": 95,
+          "motor_speed": 990,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 380
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=900.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dry_run",
+      "label": "Dry run",
+      "short": "Dry run",
+      "metric": "40 Hz · 100 kW",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-dry",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 40,
+            "motor_current": 300,
+            "motor_torque": 40,
+            "output_power": 100,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 100
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "dry_run",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "dry_run",
+            "matched_conditions": [
+              "DR_F: output_frequency=40.00 == setpoint 40.00",
+              "DR_C: output_power=100.0 <= DR_kW 266.8 (0.667*400)",
+              "DR_C: motor_current=300.0 <= DR_A 554.9 (0.64*867)",
+              "DR_C: motor_torque=40.0 < 70"
+            ],
+            "total_conditions": 4
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 40,
+          "output_power": 100,
+          "motor_current": 300,
+          "motor_torque": 40,
+          "motor_speed": 990,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 380
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=300.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "unbalance",
+      "label": "Unbalance",
+      "short": "Unbalance",
+      "metric": "Fasa W 140 A",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-unbalance",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 200,
+            "motor_torque": 40,
+            "output_power": 100,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 140
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "unbalance",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "unbalance",
+            "matched_conditions": [
+              "unbalance OR: Eu 13.33% TRUE, Ev 13.33% TRUE, Ew -19.05% TRUE >= 10.00% (Ri 113.33)"
+            ],
+            "total_conditions": 1
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 39,
+          "output_power": 100,
+          "motor_current": 200,
+          "motor_torque": 40,
+          "motor_speed": 990,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 380
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=200.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "undervoltage",
+      "label": "Undervoltage",
+      "short": "Undervoltage",
+      "metric": "340 V",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-undervoltage",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 200,
+            "motor_torque": 40,
+            "output_power": 100,
+            "input_voltage": 340,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 100
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "undervoltage",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "undervoltage",
+            "matched_conditions": [
+              "input_voltage 340.00 < 360.00"
+            ],
+            "total_conditions": 1
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 39,
+          "output_power": 100,
+          "motor_current": 200,
+          "motor_torque": 40,
+          "motor_speed": 990,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 340
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=200.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "overvoltage",
+      "label": "Overvoltage",
+      "short": "Overvoltage",
+      "metric": "415 V",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-overvoltage",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 200,
+            "motor_torque": 40,
+            "output_power": 100,
+            "input_voltage": 415,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 100
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "overvoltage",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "overvoltage",
+            "matched_conditions": [
+              "input_voltage 415.00 > 410.00"
+            ],
+            "total_conditions": 1
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 39,
+          "output_power": 100,
+          "motor_current": 200,
+          "motor_torque": 40,
+          "motor_speed": 990,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 415
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=200.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "panel_overheat",
+      "label": "Panel overheat",
+      "short": "Panel overheat",
+      "metric": "65 °C",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-panel",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 200,
+            "motor_torque": 40,
+            "output_power": 100,
+            "input_voltage": 380,
+            "ambient_temperature": 65,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 100,
+            "arus_rms_v": 100,
+            "arus_rms_w": 100
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "panel_overheat",
+        "timestamp": "2026-10-19T10:00:00+07:00",
+        "readings_count": 1,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "panel_overheat",
+            "matched_conditions": [
+              "ambient_temperature=65.0 >= 60"
+            ],
+            "total_conditions": 3
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 39,
+          "output_power": 100,
+          "motor_current": 200,
+          "motor_torque": 40,
+          "motor_speed": 990,
+          "ambient_temperature": 65,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 380
+        },
+        "limitations": [
+          "TURBULENSI T_A insufficient_history: need_30_got_0 (need 30 prev, A=200.0)"
+        ],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    },
+    {
+      "id": "turbulensi",
+      "label": "Turbulensi",
+      "short": "Turbulensi",
+      "metric": "31 pembacaan",
+      "input": {
+        "profile_id": "5000_lps",
+        "namespace": "golden-turb-ma30",
+        "setpoint_freq": null,
+        "readings": [
+          {
+            "timestamp": "2026-10-19T10:00:00+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:01+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:02+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:03+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:04+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:05+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:06+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:07+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:08+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:09+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:10+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:11+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:12+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:13+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:14+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:15+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:16+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:17+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:18+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:19+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:20+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:21+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:22+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:23+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:24+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:25+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:26+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:27+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:28+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:29+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 550,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          },
+          {
+            "timestamp": "2026-10-19T10:00:30+07:00",
+            "motor_speed": 990,
+            "output_frequency": 39,
+            "motor_current": 615,
+            "motor_torque": 95,
+            "output_power": 450,
+            "input_voltage": 380,
+            "ambient_temperature": 30,
+            "control_board_temperature": 40,
+            "inverter_temperature": 45,
+            "arus_rms_u": 200,
+            "arus_rms_v": 200,
+            "arus_rms_w": 200
+          }
+        ]
+      },
+      "result": {
+        "trouble_type": "turbulensi",
+        "timestamp": "2026-10-19T10:00:30+07:00",
+        "readings_count": 31,
+        "evaluation_status": "FULL",
+        "matched_rules": [
+          {
+            "trouble_type": "turbulensi",
+            "matched_conditions": [
+              "freq=39.0 < setpoint 40.0",
+              "power=450.0 >= 400",
+              "current=615.0 vs MA30550.0 Δ+65.0 |Δ|65.0>=10",
+              "torque=95.0 >= 90%"
+            ],
+            "total_conditions": 4
+          }
+        ],
+        "sensor_snapshot": {
+          "output_frequency": 39,
+          "output_power": 450,
+          "motor_current": 615,
+          "motor_torque": 95,
+          "motor_speed": 990,
+          "ambient_temperature": 30,
+          "control_board_temperature": 40,
+          "inverter_temperature": 45,
+          "input_voltage": 380
+        },
+        "limitations": [],
+        "rule_evaluations": [
+          {
+            "trouble_type": "pompa_tersangkut_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "turbulensi",
+            "evaluation": "MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "banyak_sampah",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "dry_run",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "panel_overheat",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "unbalance",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "undervoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          },
+          {
+            "trouble_type": "overvoltage",
+            "evaluation": "NO_MATCH",
+            "capability_status": "READY"
+          }
+        ]
+      }
+    }
+  ]
+}

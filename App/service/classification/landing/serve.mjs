@@ -21,6 +21,7 @@ const ALLOWED = new Map([
   ["/index.html", { file: "index.html", type: "text/html; charset=utf-8" }],
   ["/styles.css", { file: "styles.css", type: "text/css; charset=utf-8" }],
   ["/app.js", { file: "app.js", type: "text/javascript; charset=utf-8" }],
+  ["/data.json", { file: "data.json", type: "application/json; charset=utf-8" }],
 ]);
 
 const SECURITY_HEADERS = {
@@ -81,7 +82,7 @@ const server = createServer(async (request, response) => {
       "content-type": entry.type,
       "content-length": String(body.byteLength),
       "cache-control":
-        entry.file === "index.html"
+        entry.file === "index.html" || entry.file === "data.json"
           ? "no-cache"
           : "public, max-age=3600",
     });

@@ -60,6 +60,9 @@ jobs:
         with:
           node-version: "24"
       - run: node --check serve.mjs
+      - run: node --check app.js
+      - run: node --check build-data.mjs
+      - run: node build-data.mjs --check
       - name: Start landing and smoke test
         run: |
           node serve.mjs &
@@ -69,9 +72,22 @@ jobs:
             curl -fsS http://127.0.0.1:3030/healthz && break
             sleep 0.5
           done
-          curl -fsS http://127.0.0.1:3030/ | grep -q "Pump Trouble Classification"
-          curl -fsS http://127.0.0.1:3030/styles.css | grep -q -- "--accent"
+          curl -fsS http://127.0.0.1:3030/ | grep -q "Gangguan pompa, sampai ke bukti"
+          curl -fsS http://127.0.0.1:3030/styles.css | grep -q -- "--signal-blue"
           curl -fsS http://127.0.0.1:3030/app.js | grep -q "API_HEALTH"
+          curl -fsS http://127.0.0.1:3030/data.json | node -e '
+            let raw = "";
+            process.stdin.on("data", (chunk) => (raw += chunk));
+            process.stdin.on("end", () => {
+              const data = JSON.parse(raw);
+              if (data.cases.length !== 9) throw new Error("expected 9 cases");
+              if (data.rules.length !== 8) throw new Error("expected 8 rules");
+              if (!data.cases.some((item) => item.id === data.default_case)) {
+                throw new Error("default case missing");
+              }
+              console.log("landing data ok");
+            });
+          '
 
   frontend:
     runs-on: ubuntu-latest

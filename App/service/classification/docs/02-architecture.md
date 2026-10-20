@@ -47,8 +47,10 @@ frontend/src/app/
   chat/page.tsx           # Chat asisten Dexmin (SSE)
   admin/page.tsx          # Ubah acuan tiap profil
 landing/
-  index.html              # Halaman publik (produk + status API)
-  styles.css · app.js     # Tampilan + widget status
+  index.html              # Halaman publik: lembar diagnosis + kontrak API
+  styles.css · app.js     # Tampilan, pemilih kasus, widget status
+  build-data.mjs          # Generate data.json dari rules + golden suite
+  data.json               # 9 contoh diagnosis + 8 aturan (generated)
   serve.mjs               # Static server stdlib (:3030)
 ```
 

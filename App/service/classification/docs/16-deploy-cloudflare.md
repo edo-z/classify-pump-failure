@@ -8,6 +8,8 @@ Mesin 24/7 + linger aktif.
 - `~/.cloudflared/config.yml` (tunnel `classify-pump`, catch-all 404)
 - `backend-node/.env.example` → `CLASSIFICATION_API_KEY` (JANGAN commit `.env` asli)
 - `landing/` → halaman publik statis (`index.html`, `styles.css`, `app.js`, `serve.mjs`)
+- `landing/data.json` → 9 contoh diagnosis + 8 aturan, digenerate dari golden suite backend
+  (`node build-data.mjs`; `--check` memastikan tidak drift)
 - systemd user:
   - `classify-pump-node` (`:3031`)
   - `classify-pump-landing` (static `:3030`)
@@ -20,7 +22,9 @@ Mesin 24/7 + linger aktif.
 - Restart: `systemctl --user restart classify-pump-{node,landing}`
 - Rollback landing → app: `systemctl --user stop classify-pump-landing`,
   `systemctl --user enable --now classify-pump-frontend` (tunnel tidak berubah)
-- Update landing: ubah file di `landing/`, lalu `systemctl --user restart classify-pump-landing`
+- Update landing: ubah file di `landing/`; bila data/aturan berubah, jalankan
+  `cd landing && node build-data.mjs`, lalu `systemctl --user restart classify-pump-landing`
+- Cek sinkron data: `cd landing && node build-data.mjs --check`
 - Frontend app (bila dihidupkan lagi): `bun run build` di `frontend/`,
   lalu restart `classify-pump-frontend`
 - Unit frontend: `SuccessExitStatus=143 SIGTERM` (stop saat restart bukan failure)
@@ -37,7 +41,8 @@ sudah dihapus (lihat `12` dan `20`).
 
 ## Verifikasi penerimaan
 - `GET https://classify.aldozeno.my.id/` → 200 `text/html` (landing), judul
-  “DEXMIN — Pump Trouble Classification”
+  “DEXMIN — Klasifikasi Gangguan Pompa”
+- `GET https://classify.aldozeno.my.id/data.json` → 9 kasus, 8 aturan
 - `GET https://classify.aldozeno.my.id/healthz` → `{"status":"ok","service":"landing"}`
 - `GET https://class-api.aldozeno.my.id/health` → `ok`
 - `POST https://class-api.aldozeno.my.id/classify` → 200
