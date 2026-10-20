@@ -1,5 +1,10 @@
 # 11 — Tampilan
 
+> Takedown 2026-10-20: aplikasi web Next.js dinonaktifkan; hostname publik
+> `classify.aldozeno.my.id` kini menyajikan **landing statis** (`landing/`).
+> Seluruh kode di `frontend/` tetap disimpan utuh sebagai library/referensi,
+> dan unit `classify-pump-frontend` di-*disable* (lihat `16`).
+>
 > Refactor 2026-10-19: backend Python tidak lagi menyediakan `/documents`,
 > `/normalization`, `/telemetry`, dan `/classification/*`. Halaman `/documents`
 > masih dapat dibuka, tetapi unggah/normalisasi/telemetry/pindai akan gagal

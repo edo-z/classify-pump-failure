@@ -7,7 +7,8 @@ Klasifikasi gangguan pompa (penggerak/VSD dan panel) dari data sensor file CSV: 
 ```
 App/service/classification/
   backend-node/  # Node.js (TypeScript + Fastify) :3031 — klasifikasi single-shot BE (/classify)
-  frontend/      # Next.js :3030 — dokumen, chat Dexmin, admin setpoint
+  landing/       # Halaman publik statis :3030 (produk + status API)
+  frontend/      # Library Next.js (app dinonaktifkan; kode disimpan utuh)
   docs/          # 01-overview … 20-migrasi-nodejs (arsitektur, kontrak, operasi, FMEA)
 Data/        # CSV mentah + metadata/normalized (contoh: aldo_pump_logs_2.csv)
 Docs/        # Manual pompa (ATV610, ACS580/ACQ580, D32)
@@ -16,6 +17,7 @@ PRODUCT.md   # Tujuan produk • DESIGN.md — sistem desain "Ruang Kontrol Tena
 
 > Backend Python (FastAPI) dihapus pada cutover 2026-10-20; perilakunya dibekukan
 > sebagai fixture golden + differential (`docs/20-migrasi-nodejs.md`).
+> App frontend di-takedown pada 2026-10-20; hostname publik menyajikan landing.
 
 ## Jalan cepat (lokal)
 
@@ -24,9 +26,11 @@ PRODUCT.md   # Tujuan produk • DESIGN.md — sistem desain "Ruang Kontrol Tena
 cd App/service/classification
 ./run.sh   # node backend-node/src/server.ts → :3031
 
-# frontend
-cd frontend
-bun install && bun run dev   # :3030, teruskan /api/* → :3031
+# landing
+cd landing && node serve.mjs   # :3030
+
+# frontend (library; opsional untuk pengembangan UI)
+cd frontend && bun install && bun run dev
 ```
 
 Env kanonis: `App/service/classification/backend-node/.env.example` (jangan commit `.env` asli).
@@ -41,11 +45,14 @@ Satu endpoint stabil, stateless, tanpa CSV: `POST /classify` — kirim `{profile
 # backend
 cd App/service/classification/backend-node
 npm ci && npm run typecheck && npm test
-# frontend
+# landing
+node --check App/service/classification/landing/serve.mjs
+# frontend (library)
+cd App/service/classification/frontend
 bun run typecheck && bun run check:deadcode && bun run build
 bunx playwright test e2e/chat.spec.ts
 ```
 
 ## Operasi
 
-Systemd user: `classify-pump-node`, `classify-pump-frontend`, `classify-pump-tunnel` (Cloudflare). Detail: `docs/16-deploy-cloudflare.md`. Cek sehat: `GET /health` → `{status, rules_exists, rules_loaded, rules_error, setpoints_exists, setpoints_loaded, setpoints_error}`.
+Systemd user: `classify-pump-node` (:3031), `classify-pump-landing` (:3030), `classify-pump-frontend` (disabled — library), `classify-pump-tunnel` (Cloudflare). Detail: `docs/16-deploy-cloudflare.md`. Cek sehat: `GET /health` → `{status, rules_exists, rules_loaded, rules_error, setpoints_exists, setpoints_loaded, setpoints_error}`.
