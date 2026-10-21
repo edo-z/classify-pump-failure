@@ -1,9 +1,0 @@
-node_modules/
-.next/
-out/
-tsconfig.tsbuildinfo
-test-results/
-.playwright/
-.env
-.env.local
-.e2e/

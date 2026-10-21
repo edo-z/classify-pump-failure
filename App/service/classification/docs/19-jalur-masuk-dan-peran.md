@@ -1,6 +1,9 @@
 # 19 — Jalur Masuk dan Peran Klasifikasi (Bahasa Sederhana)
 
 > 5R: ringkas, rapi, bersih, terawat, rajin. Dokumen ini menjelaskan jalur masuk dulu, peran klasifikasi nanti. Angka batas lengkap tetap di `06`, kontrak BE tetap di `18`.
+>
+> Amendemen 2026-10-21: frontend Next.js dan unit `classify-pump-frontend`
+> dihapus; referensi frontend di bawah adalah arsip historis.
 
 ## Ringkasan
 

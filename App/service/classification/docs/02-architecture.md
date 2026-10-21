@@ -31,21 +31,12 @@ backend-node/src/
   util/                     # format Python, timestamp ber-zona, JSON
 ```
 
-## Struktur Tampilan (Frontend) — library, tidak dilayani
+## Struktur Tampilan — landing statis
 
-> Takedown 2026-10-20: app Next.js tidak lagi berjalan. Hostname publik
-> `classify.aldozeno.my.id` dilayani **landing statis** (`landing/serve.mjs`).
-> Kode `frontend/` disimpan utuh sebagai library/referensi dan dapat
-> dihidupkan kembali lewat unit `classify-pump-frontend` (lihat `16`).
+> 2026-10-21: aplikasi Next.js dan direktori `frontend/` dihapus. Hostname publik
+> `classify.aldozeno.my.id` hanya dilayani **landing statis** (`landing/serve.mjs`).
 
 ```
-frontend/src/app/
-  api.ts                  # Panggil layanan (/api/*)
-  replay.ts               # 16 sinyal file, tampung, gambar
-  page.tsx                # Alih → /documents
-  documents/page.tsx      # Penilaian kelompok + pindai + grafik file
-  chat/page.tsx           # Chat asisten Dexmin (SSE)
-  admin/page.tsx          # Ubah acuan tiap profil
 landing/
   index.html              # Halaman publik: lembar diagnosis + kontrak API
   styles.css · app.js     # Tampilan, pemilih kasus, widget status
@@ -61,8 +52,7 @@ landing/
 > `aturan.html` tetap sinkron lewat `node build-rules.mjs --check`.
 >
 > Endpoint lama `/documents`, `/normalization`, `/telemetry`, `/classification/*`
-> sudah dihapus. Halaman `/documents` (bila app dihidupkan lagi) akan gagal
-> sampai frontend disesuaikan.
+> sudah dihapus.
 
 ## Modul & Tanggung Jawab
 

@@ -3,7 +3,7 @@
  * Static landing server (stdlib only, no dependencies).
  *
  * Serves an allowlisted set of files for classify.aldozeno.my.id after the
- * Next.js app was taken down. HOST=127.0.0.1, PORT=3030 (Cloudflare tunnel
+ * Next.js app was removed. HOST=127.0.0.1, PORT=3030 (Cloudflare tunnel
  * maps the public hostname here).
  */
 

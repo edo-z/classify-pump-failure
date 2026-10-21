@@ -97,13 +97,3 @@ jobs:
               console.log("landing data ok");
             });
           '
-
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --cwd App/service/classification/frontend
-      - run: bun run --cwd App/service/classification/frontend typecheck
-      - run: bun run --cwd App/service/classification/frontend check:deadcode
-      - run: bun run --cwd App/service/classification/frontend build

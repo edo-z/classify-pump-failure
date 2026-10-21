@@ -1,5 +1,8 @@
 # 10 — Aliran Data ke Tampilan (SSE)
 
+> 2026-10-21: UI chat dan frontend Next.js dihapus. Dokumen ini adalah arsip
+> historis; landing statis tidak meneruskan SSE.
+
 Satu-satunya SSE tersisa adalah chat asisten Dexmin (model eksternal `:4100`, loopback saja).
 
 ## Chat Dexmin

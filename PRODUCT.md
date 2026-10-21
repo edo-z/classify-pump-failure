@@ -8,47 +8,48 @@ web
 
 ## Users
 
-Teknisi lapangan pompa. Mereka memantau kondisi pompa (penggerak/VSD dan panel) di lapangan, menindaklanjuti gangguan yang terdeteksi, dan bertanya-jawab dengan asisten Dexmin untuk menganalisis kondisi — sering dari perangkat bergerak dan kadang dari jaringan terbatas (tunnel/CDN).
+Teknisi lapangan pompa. Mereka memantau kondisi pompa (penggerak/VSD dan panel), menindaklanjuti gangguan yang terdeteksi, dan memeriksa bukti klasifikasi — sering dari perangkat bergerak dan kadang dari jaringan terbatas (tunnel/CDN).
 
 ## Product Purpose
 
-Mengubah data sensor mentah pompa menjadi keputusan operasional yang bisa ditindaklanjuti teknisi: klasifikasi gangguan yang konsisten dari file/batch plus asisten chat Dexmin yang membantu analisis. Sukses = teknisi terbantu Dexmin dalam memahami dan menindaklanjuti kondisi pompa.
+Mengubah data sensor mentah pompa menjadi keputusan operasional yang bisa ditindaklanjuti teknisi: klasifikasi gangguan yang konsisten lewat landing statis dan API. Sukses = teknisi dapat memahami dan menindaklanjuti kondisi pompa dari satu sumber aturan.
 
 ## Positioning
 
-Satu mesin aturan yang sama menilai semua jalur data (tidak ada penilaian ganda yang bertentangan), digabung dengan asisten berpengetahuan RAG (Neo4j + Dexmin) yang menjelaskan hasil dalam bahasa teknisi.
+Satu mesin aturan yang sama menilai semua data dan menampilkan ambang, contoh, serta bukti yang dapat diperiksa — tanpa penilaian ganda yang bertentangan.
 
 ## Operating Context
 
-- Alur kerja: unggah CSV → siapkan data → pindai klasifikasi → lihat grafik per-sinyal + tabel kegagalan; atau chat dengan Dexmin (dengan/tanpa konteks dokumen).
-- Lingkungan: frontend Next.js (:3030, production di belakang tunnel Cloudflare), backend klasifikasi FastAPI (:3031), model AI SSE (:4100, loopback saja), Neo4j.
-- Ritual mutu: typecheck + knip + build hijau, E2E Playwright sebelum deploy.
+- Alur kerja: pilih contoh diagnosis di landing atau kirim `readings` ke `POST /classify`, lalu baca `trouble_type`, `matched_rules`, `sensor_snapshot`, dan `limitations`.
+- Lingkungan: landing statis (`:3030`, di belakang tunnel Cloudflare) dan backend Node.js (`:3031`). Tidak ada aplikasi Next.js, chat, atau RAG.
+- Ritual mutu: typecheck + backend tests + landing smoke + pemeriksaan generator sebelum deploy.
 
 ## Capabilities and Constraints
 
 - Klasifikasi 9 hasil: `pompa_tersangkut_sampah`, `turbulensi`, `banyak_sampah`, `unbalance`, `undervoltage`, `overvoltage`, `dry_run` (nama lama `low_water_menyala`), `panel_overheat`, `normal`.
 - Ambang teknis lestari: undervoltage < 360 V, overvoltage > 410 V, panel overheat ≥ 60 °C, unbalance ≥ 10%, pompa tersangkut diputuskan langsung (frekuensi ≤ 10 Hz + minimal 3 dari 4 tanda lain).
 - Data kosong tidak pernah diisi nol; waktu kejadian mengikuti data, bukan waktu terima.
-- Chat: frontend hanya menampilkan; penilaian tugas model. Riwayat 10 turn di memori browser, dikirim ulang tiap turn (LLM stateless). SSE tanpa gzip (`compress: false`).
-- Kontrak LLM: `delta {text}` → `done {session_id, model, model_actual, usage, reasoning_preview, ...}` → `error {message}`; semua kunci baru nullable.
+- Landing: `/` diagnosis, `/aturan` aturan mentah + contoh 500/3000/5000 lps, `/data.json` data contoh, `/healthz` status.
+- `/aturan` statis dan print-friendly; tabel menjadi kartu berlabel pada layar sempit.
 
 ## Brand Commitments
 
 - Bahasa antarmuka: Indonesia.
-- Gaya visual: profesional, tanpa ikon (monogram inisial bila perlu avatar), terang saja (tanpa mode gelap).
-- Nama lestari: "Dexmin" (asisten), "Pump Classification PoC".
+- Gaya visual: profesional, tanpa ikon, terang saja (tanpa mode gelap).
+- Nama lestari: "Dexmin", "Pump Classification PoC".
 
 ## Evidence on Hand
 
 - Dataset: `Data/classification-input/raw/aldo_pump_logs_2.csv` (+ metadata/normalized).
 - Dokumen manual pompa: `Docs/` (ATV610, ACS580/ACQ580, D32).
-- E2E: `App/service/classification/frontend/e2e/` (chat, all-rules, voltage).
+- Backend: golden suite + 400 kasus differential di `App/service/classification/backend-node/test/`.
+- Landing: smoke test CI + generator `--check` untuk `data.json` dan `aturan.html`.
 - API reference: `App/service/classification/docs/12-api-reference.md`.
 
 ## Product Principles
 
 1. Satu aturan untuk semua jalur — tidak ada dua kebenaran.
-2. Jujur soal data — kosong dilaporkan hilang, garis patah di grafik, tidak ada smoothing yang menyesatkan.
+2. Jujur soal data — kosong dilaporkan hilang, tidak ada smoothing yang menyesatkan.
 3. Teknisi dulu — setiap tampilan harus menjawab "lalu saya harus apa?" dalam sekali pandang.
-4. Stabilitas eksplisit — stream ditutup bersih saat error, coba-lagi manual, tanpa zombie.
-5. Bukti di atas klaim — setiap perubahan dikunci typecheck, detector, E2E, dan smoke test terukur.
+4. Ringkas dan tahan print — informasi penting tetap terbaca di layar sempit dan kertas.
+5. Bukti di atas klaim — setiap perubahan dikunci typecheck, detector, test, dan smoke test terukur.

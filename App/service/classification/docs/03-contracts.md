@@ -9,7 +9,7 @@
   `rules_version`; versi `rules.json` tetap metadata internal dan tak
   diekspos lewat API. Perubahan aturan dikomunikasikan lewat catatan rilis.
 - **Nama tipe** memakai prefiks domain `Classify*` (mis. `ClassifyRequest`,
-  `ClassifyResponse`, `ClassifyReading`) di backend maupun frontend.
+  `ClassifyResponse`, `ClassifyReading`) di backend maupun klien.
 
 ## Kolom Sensor Kanonis (16 kolom)
 

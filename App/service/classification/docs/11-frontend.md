@@ -1,41 +1,36 @@
-# 11 — Tampilan
+# 11 — Tampilan Landing
 
-> Takedown 2026-10-20: aplikasi web Next.js dinonaktifkan; hostname publik
-> `classify.aldozeno.my.id` kini menyajikan **landing statis** (`landing/`).
-> Seluruh kode di `frontend/` tetap disimpan utuh sebagai library/referensi,
-> dan unit `classify-pump-frontend` di-*disable* (lihat `16`).
->
-> Refactor 2026-10-19: backend Python tidak lagi menyediakan `/documents`,
-> `/normalization`, `/telemetry`, dan `/classification/*`. Halaman `/documents`
-> masih dapat dibuka, tetapi unggah/normalisasi/telemetry/pindai akan gagal
-> (404). Frontend **tidak diubah** pada tahap ini; penyesuaian dilakukan saat
-> migrasi Node.js (`20-migrasi-nodejs.md`).
+> 2026-10-21: aplikasi Next.js, direktori `frontend/`, dan unit
+> `classify-pump-frontend` dihapus. Hostname publik
+> `classify.aldozeno.my.id` hanya menyajikan **landing statis** (`landing/`).
 
 ## Halaman
 
-- `/` → pindah ke `/documents`.
-- `/documents` penilaian kelompok & pemindaian + grafik file.
-- `/chat` chat asisten Dexmin (SSE).
-- `/admin` ubah acuan tiap ukuran pompa.
+- `/` — lembar diagnosis: pemilih kasus, bukti, dan kontrak API.
+- `/aturan` — aturan mentah serta contoh 500/3000/5000 lps.
+- `/data.json` — 9 contoh diagnosis + 8 aturan, hasil generate.
+- `/healthz` — status server landing.
 
-## Halaman Dokumen
+## Berkas
 
-- Pilih file + profil + rentang/langkah + unggah + siapkan data + nilai file ini (pindai).
-- Grafik file: 16 kolom padat + rentang `1 jam – 1 tahun` + 3 grafik kecil kelompok.
+- `index.html` — halaman diagnosis.
+- `aturan.template.html` → `aturan.html` — halaman aturan (generated).
+- `styles.css`, `app.js` — tampilan dan interaksi diagnosis.
+- `serve.mjs` — server statis stdlib, allowlist route, `:3030`.
+- `build-data.mjs`, `build-rules.mjs` — generator data dan aturan.
 
-## Hasil Penilaian
+## Aturan Tampilan
 
-- **Utama:** jenis gangguan, kelengkapan data, waktu, bukti + syarat terpenuhi + catatan keterangan.
-- **Rincian:** tabel penilaian tiap gangguan + data hilang + ringkasan sensor.
-- Titik gangguan → daerah berwarna di grafik + tanda titik.
+- Statis, tanpa framework; `/aturan` tidak memakai JavaScript klien.
+- Mobile-first: tabel menjadi kartu berlabel pada lebar ≤640px.
+- Print-friendly: tabel tidak overflow dan `details` sumber tetap terbaca.
+- Warna dan tipografi mengikuti `DESIGN.md`.
 
-## Admin
+## Update
 
-- Profil 500/3000/5000, isi frekuensi/kecepatan/torsi → simpan atomik.
-
-## Preset Sinyal per Trouble (keputusan produk #1: Opsi B)
-
-Preset `turbulensi`, `banyak_sampah`, `dry_run` sengaja identik
-(`outputFrequency, frequencySetpoint, outputPower, motorCurrent, motorTorque`)
-karena kelimanya memang input ketiga rumus tersebut. Diskriminasi visual
-dilakukan via badge + tabel + `markArea`, bukan via preset berbeda.
+```bash
+cd App/service/classification/landing
+node build-rules.mjs && node build-data.mjs
+node build-rules.mjs --check && node build-data.mjs --check
+systemctl --user restart classify-pump-landing
+```

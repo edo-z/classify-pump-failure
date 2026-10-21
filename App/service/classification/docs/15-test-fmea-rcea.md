@@ -24,6 +24,10 @@ RCEA = Root Cause + Effects Analysis (akar + dampak + aksi).
 > `tests/test_contract_v1.py` → `test_contract.py` (5 test, tetap hijau).
 > Kontrak request/response **tidak berubah**. Rekam di `12-api-reference.md`
 > §Rename dan kebijakan di `03-contracts.md` §Kebijakan Penamaan.
+>
+> Amendemen 2026-10-21: direktori `frontend/` dan unit
+> `classify-pump-frontend` dihapus. Semua referensi frontend/Next.js/E2E di
+> bawah adalah **arsip historis**.
 
 ## 1. FMEA per area uji (urut RPN sisa tertinggi)
 

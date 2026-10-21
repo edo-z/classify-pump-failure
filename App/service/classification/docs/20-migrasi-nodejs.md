@@ -5,6 +5,9 @@
 > dan DB ingest. Cutover 2026-10-20: backend Node.js mengambil alih `:3031` dan
 > **kode Python dihapus**; perilakunya dibekukan sebagai fixture golden +
 > differential. Tag rollback: `pre-python-removal`.
+>
+> Amendemen 2026-10-21: frontend Next.js dan unit `classify-pump-frontend`
+> dihapus; referensi frontend di bawah adalah arsip historis.
 
 ## Ringkasan Keputusan
 
