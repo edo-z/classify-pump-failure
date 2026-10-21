@@ -7,7 +7,7 @@ Klasifikasi gangguan pompa (penggerak/VSD dan panel) dari data sensor file CSV: 
 ```
 App/service/classification/
   backend-node/  # Node.js (TypeScript + Fastify) :3031 — klasifikasi single-shot BE (/classify)
-  landing/       # Halaman publik statis :3030 (lembar diagnosis + status API)
+  landing/       # Halaman publik statis :3030 (diagnosis, aturan, status API)
   frontend/      # Library Next.js (app dinonaktifkan; kode disimpan utuh)
   docs/          # 01-overview … 20-migrasi-nodejs (arsitektur, kontrak, operasi, FMEA)
 Data/        # CSV mentah + metadata/normalized (contoh: aldo_pump_logs_2.csv)
@@ -26,8 +26,8 @@ PRODUCT.md   # Tujuan produk • DESIGN.md — sistem desain "Ruang Kontrol Tena
 cd App/service/classification
 ./run.sh   # node backend-node/src/server.ts → :3031
 
-# landing
-cd landing && node build-data.mjs && node serve.mjs   # :3030
+# landing (build-rules memakai engine backend-node)
+cd landing && node build-rules.mjs && node build-data.mjs && node serve.mjs   # :3030
 
 # frontend (library; opsional untuk pengembangan UI)
 cd frontend && bun install && bun run dev
@@ -47,7 +47,9 @@ cd App/service/classification/backend-node
 npm ci && npm run typecheck && npm test
 # landing
 cd App/service/classification/landing
-node --check serve.mjs && node --check app.js && node build-data.mjs --check
+node --check serve.mjs && node --check app.js \
+  && node --check build-rules.mjs && node build-rules.mjs --check \
+  && node build-data.mjs --check
 # frontend (library)
 cd App/service/classification/frontend
 bun run typecheck && bun run check:deadcode && bun run build

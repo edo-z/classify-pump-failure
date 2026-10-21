@@ -28,6 +28,7 @@
             <span class="status-dot" id="status-dot" data-state="loading" aria-hidden="true"></span>
             <span id="status-text">Memeriksa API…</span>
           </div>
+          <a class="topbar-link" href="/aturan">Aturan</a>
           <a class="topbar-link" href="#kontrak">Kontrak API</a>
         </div>
       </div>
@@ -45,7 +46,7 @@
           <button class="button-primary" id="copy-curl" type="button" disabled>
             Salin panggilan
           </button>
-          <a class="button-ghost" href="#aturan">Lihat aturan</a>
+          <a class="button-ghost" href="/aturan">Lihat aturan</a>
         </div>
         <p class="copy-feedback" id="copy-feedback" role="status" aria-live="polite"></p>
       </section>
@@ -99,7 +100,8 @@
           <h2 id="rules-title">Aturan dan urutan</h2>
           <p>
             Delapan aturan dievaluasi berurutan. Diagnosis diambil dari aturan
-            pertama yang cocok. Ambang di bawah untuk profil 5000 lps.
+            pertama yang cocok. Ambang di bawah untuk profil 5000 lps;
+            <a class="text-link" href="/aturan">bandingkan 500, 3000, dan 5000 lps</a>.
           </p>
         </header>
         <ol class="rule-list" id="rule-list"></ol>

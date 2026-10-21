@@ -59,10 +59,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: App/service/classification/backend-node/package-lock.json
+      - name: Install backend dependencies for rules builder
+        working-directory: App/service/classification/backend-node
+        run: npm ci
       - run: node --check serve.mjs
       - run: node --check app.js
       - run: node --check build-data.mjs
+      - run: node --check build-rules.mjs
       - run: node build-data.mjs --check
+      - run: node build-rules.mjs --check
       - name: Start landing and smoke test
         run: |
           node serve.mjs &
@@ -73,6 +80,8 @@ jobs:
             sleep 0.5
           done
           curl -fsS http://127.0.0.1:3030/ | grep -q "Gangguan pompa, sampai ke bukti"
+          curl -fsS http://127.0.0.1:3030/aturan | grep -q "Aturan, sampai ke ambang"
+          curl -fsS http://127.0.0.1:3030/aturan | grep -q "5000 lps"
           curl -fsS http://127.0.0.1:3030/styles.css | grep -q -- "--signal-blue"
           curl -fsS http://127.0.0.1:3030/app.js | grep -q "API_HEALTH"
           curl -fsS http://127.0.0.1:3030/data.json | node -e '

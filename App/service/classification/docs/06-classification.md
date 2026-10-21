@@ -97,14 +97,14 @@ Dinilai dari pembacaan terakhir, tanpa rata-rata, tanpa menunggu bukti berulang 
 
 Pompa dinyatakan dry run (jalan kering / tanpa beban air) bila **dua tingkat** ini terpenuhi: `DryRun = DR_F ∧ DR_C` dengan `DR_C = DR_KW ∧ DR_A ∧ DR_T` (semua wajib, AND):
 
-1. **DR_F — Frekuensi** `=` setpoint operasi (`35` / `38` / `40` Hz) dalam **raw 2 desimal** (tanpa normalisasi; `35.004→35.00` lolos terhadap `35.00`, `35.006→35.01` tidak).
+1. **DR_F — Frekuensi** `=` setpoint operasi (`46,1` / `38` / `40` Hz) dalam **raw 2 desimal** (tanpa normalisasi; `46.104→46.10` lolos terhadap `46.10`, `46.106→46.11` tidak).
 2. **DR_KW — Daya** ≤ `0,667 ×` acuan daya (`50,025` / `166,75` / `266,8` kW).
 3. **DR_A — Arus** ≤ `0,64 ×` acuan arus (`100,48` / `330,88` / `554,88` A).
 4. **DR_T — Torsi** `< 70`.
 
-Keputusan per-sampel terakhir: sekali keempatnya terpenuhi langsung **dry run**, tanpa arming maupun buffer.
+Keputusan per-sampel terakhir: `freq_sustain: 1`, jadi sekali keempatnya terpenuhi langsung **dry run**, tanpa buffer tambahan.
 
-Contoh pompa 500: frekuensi `35.00 == 35.00` + daya `20 ≤ 50,025` + arus `40 ≤ 100,48` + torsi `40 < 70` → **dry run**. Batas torsi: `69,9` lolos, `70` tidak. Bila salah satu meleset (misal frekuensi `0` saat pompa mati, atau `30 ≠ 35`) → tidak.
+Contoh pompa 500: frekuensi `46.10 == 46.10` + daya `20 ≤ 50,025` + arus `40 ≤ 100,48` + torsi `40 < 70` → **dry run**. Batas torsi: `69,9` lolos, `70` tidak. Bila salah satu meleset (misal frekuensi `0` saat pompa mati, atau `30 ≠ 46,1`) → tidak.
 
 ## Hasil Penilaian
 
@@ -152,4 +152,4 @@ Untuk pompa yang beroperasi di luar standar tier, sistem mendukung **setpoint ov
 
 ## Konfigurasi Batas per Pompa
 
-Batas tiap ukuran pompa (torsi dalam `%`): pompa 500 → frekuensi `35 Hz`, kecepatan `900`, torsi `70%`; pompa 3000 → `38 Hz`, `950`, `80%`; pompa 5000 → `40 Hz`, `990`, `90%`. Dapat diubah saat sistem berjalan tanpa restart. Nilai ini adalah **acuan operasi/setpoint** — bukan batas BS (`90%`) maupun PTS (`110%`, `100` RPM).
+Batas tiap ukuran pompa (torsi dalam `%`): pompa 500 → frekuensi `46,1 Hz`, kecepatan `900`, torsi `70%`; pompa 3000 → `38 Hz`, `950`, `80%`; pompa 5000 → `40 Hz`, `990`, `90%`. Dapat diubah saat sistem berjalan tanpa restart. Nilai ini adalah **acuan operasi/setpoint** — bukan batas BS (`90%`) maupun PTS (`110%`, `100` RPM).

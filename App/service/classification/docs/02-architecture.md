@@ -51,9 +51,15 @@ landing/
   styles.css · app.js     # Tampilan, pemilih kasus, widget status
   build-data.mjs          # Generate data.json dari rules + golden suite
   data.json               # 9 contoh diagnosis + 8 aturan (generated)
+  build-rules.mjs         # Generate aturan.html semua tier + contoh (butuh deps backend)
+  aturan.template.html    # Kerangka halaman aturan
+  aturan.html             # Aturan & contoh 500/3000/5000 lps (generated)
   serve.mjs               # Static server stdlib (:3030)
 ```
 
+> `/aturan` menyajikan aturan mentah dan contoh 500/3000/5000 lps; CI menjaga
+> `aturan.html` tetap sinkron lewat `node build-rules.mjs --check`.
+>
 > Endpoint lama `/documents`, `/normalization`, `/telemetry`, `/classification/*`
 > sudah dihapus. Halaman `/documents` (bila app dihidupkan lagi) akan gagal
 > sampai frontend disesuaikan.

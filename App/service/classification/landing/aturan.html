@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aturan — DEXMIN</title>
+    <meta
+      name="description"
+      content="Aturan klasifikasi pompa apa adanya: ambang untuk 500, 3000, dan 5000 lps, contoh implementasi, serta JSON sumber."
+    />
+    <!-- impeccable-disable overused-font -- DESIGN.md pins Inter as the only family -->
+    <!-- impeccable-disable cramped-padding -- table cells and raw summaries supply 14px inset -->
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Lewati ke konten</a>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/" aria-label="DEXMIN, beranda">
+          <span class="monogram" aria-hidden="true">D</span>
+          <span class="brand-text">
+            <span class="brand-name">DEXMIN</span>
+            <span class="brand-sub">Klasifikasi gangguan pompa</span>
+          </span>
+        </a>
+        <div class="topbar-meta">
+          <a class="topbar-link" href="/">Diagnosa</a>
+          <a class="topbar-link" href="/#kontrak">Kontrak API</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page aturan-page" id="main">
+      <section class="intro aturan-intro" aria-labelledby="page-title">
+        <h1 id="page-title">Aturan, sampai ke ambang.</h1>
+        <p class="lede">
+          Delapan aturan, tiga ukuran pompa, satu urutan evaluasi. Halaman ini
+          membuka ambang yang dipakai mesin, contoh yang lolos di tiap tier,
+          dan JSON sumbernya. Semua aturan dinilai; diagnosis hanya yang pertama
+          cocok.
+        </p>
+        <dl class="rule-facts">
+          <div>
+            <dt>Sumber</dt>
+            <dd>rules.json v1.1</dd>
+          </div>
+          <div>
+            <dt>Cakupan</dt>
+            <dd>500 · 3000 · 5000 lps</dd>
+          </div>
+          <div>
+            <dt>Aturan</dt>
+            <dd>8 aturan + normal</dd>
+          </div>
+        </dl>
+        <div class="actions">
+          <a class="button-primary" href="#contoh">Lihat contoh</a>
+          <a class="button-ghost" href="/">Kembali ke diagnosa</a>
+        </div>
+      </section>
+
+      <section class="aturan-section" id="urutan" aria-labelledby="order-title">
+        <header class="section-head">
+          <h2 id="order-title">Urutan evaluasi</h2>
+          <p>
+            Aturan tier berjalan lebih dulu, lalu panel, unbalance, dan
+            tegangan. Bila beberapa aturan cocok, semuanya dicatat di
+            <code>matched_rules</code>. <code>trouble_type</code> adalah yang
+            pertama secara teknis, bukan peringkat bahaya.
+          </p>
+        </header>
+
+        <div class="order-grid">
+          <ol class="order-list">
+            <li>
+              <span class="order-number">01</span>
+              <div>
+                <h3>Empat aturan tier</h3>
+                <p>Pompa tersangkut sampah → turbulensi → banyak sampah → dry run.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">02</span>
+              <div>
+                <h3>Panel</h3>
+                <p>Salah satu dari tiga suhu panel mencapai 60 °C.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">03</span>
+              <div>
+                <h3>Unbalance</h3>
+                <p>Deviasi fasa maksimum mencapai 10%.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">04</span>
+              <div>
+                <h3>Tegangan</h3>
+                <p>Undervoltage di bawah 360 V, overvoltage di atas 410 V.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">05</span>
+              <div>
+                <h3>Normal</h3>
+                <p>Fallback bila tidak ada satu pun aturan yang cocok.</p>
+              </div>
+            </li>
+          </ol>
+
+          <div class="setpoint-panel">
+            <h3>Setpoint operasi</h3>
+            <p>
+              Frekuensi dipakai oleh turbulensi, banyak sampah, dan dry run.
+              Nilai ini berasal dari <code>profile_setpoints.json</code>, bukan
+              dari batas daya/arus pompa.
+            </p>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Setpoint operasi per tier">
+              <table class="setpoint-table">
+                <caption class="visually-hidden">Setpoint operasi 500, 3000, dan 5000 lps</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Profil</th>
+                    <th scope="col">Frekuensi</th>
+                    <th scope="col">Putaran</th>
+                    <th scope="col">Torsi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+      <th scope="row">500 lps</th>
+      <td data-label="Frekuensi">46,1 Hz</td>
+      <td data-label="Putaran">900 RPM</td>
+      <td data-label="Torsi">70%</td>
+    </tr>
+<tr>
+      <th scope="row">3000 lps</th>
+      <td data-label="Frekuensi">38 Hz</td>
+      <td data-label="Putaran">950 RPM</td>
+      <td data-label="Torsi">80%</td>
+    </tr>
+<tr>
+      <th scope="row">5000 lps</th>
+      <td data-label="Frekuensi">40 Hz</td>
+      <td data-label="Putaran">990 RPM</td>
+      <td data-label="Torsi">90%</td>
+    </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="aturan-section" id="matriks" aria-labelledby="matrix-title">
+        <header class="section-head">
+          <h2 id="matrix-title">Matriks ambang</h2>
+          <p>
+            Ambang yang sama, dibaca untuk tiga tier. Aturan global ditandai
+            terpisah karena tidak berubah mengikuti ukuran pompa. Data hilang
+            dianggap tidak memenuhi syarat, bukan nol.
+          </p>
+        </header>
+        <div class="table-scroll matrix-scroll" tabindex="0" role="region" aria-label="Matriks ambang aturan per tier">
+          <table class="matrix-table">
+            <caption class="visually-hidden">Ambang delapan aturan untuk 500, 3000, dan 5000 lps</caption>
+            <thead>
+              <tr>
+                <th scope="col">Aturan</th>
+                <th scope="col">500 lps</th>
+                <th scope="col">3000 lps</th>
+                <th scope="col">5000 lps</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Pompa tersangkut sampah</h3>
+          <p>Frekuensi ≤ 10 Hz wajib; minimal 3 dari 4 tanda beban terpenuhi.</p>
+        </div>
+      </th>
+      <td data-label="500 lps"><ul class="threshold-list"><li>Frekuensi ≤ 10 Hz</li><li>Daya ≥ 75 kW</li><li>Arus ≥ 157 A</li><li>Torsi ≥ 110%</li><li>Putaran ≥ 100 RPM</li></ul></td><td data-label="3000 lps"><ul class="threshold-list"><li>Frekuensi ≤ 10 Hz</li><li>Daya ≥ 250 kW</li><li>Arus ≥ 517 A</li><li>Torsi ≥ 110%</li><li>Putaran ≥ 100 RPM</li></ul></td><td data-label="5000 lps"><ul class="threshold-list"><li>Frekuensi ≤ 10 Hz</li><li>Daya ≥ 400 kW</li><li>Arus ≥ 867 A</li><li>Torsi ≥ 110%</li><li>Putaran ≥ 100 RPM</li></ul></td>
+    </tr>
+<tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Turbulensi</h3>
+          <p>Frekuensi di bawah setpoint, arus menyimpang dari MA30/CMA, daya dan torsi di atas acuan. Semua 4 wajib.</p>
+        </div>
+      </th>
+      <td data-label="500 lps"><ul class="threshold-list"><li>Frekuensi &lt; 46,1 Hz</li><li>Daya ≥ 75 kW</li><li>|Arus − MA30| ≥ 10 A</li><li>Torsi ≥ 90%</li></ul></td><td data-label="3000 lps"><ul class="threshold-list"><li>Frekuensi &lt; 38 Hz</li><li>Daya ≥ 250 kW</li><li>|Arus − MA30| ≥ 10 A</li><li>Torsi ≥ 90%</li></ul></td><td data-label="5000 lps"><ul class="threshold-list"><li>Frekuensi &lt; 40 Hz</li><li>Daya ≥ 400 kW</li><li>|Arus − MA30| ≥ 10 A</li><li>Torsi ≥ 90%</li></ul></td>
+    </tr>
+<tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Banyak sampah</h3>
+          <p>Frekuensi tidak melewati setpoint; daya, arus, dan torsi di atas acuan. Semua 4 wajib.</p>
+        </div>
+      </th>
+      <td data-label="500 lps"><ul class="threshold-list"><li>Frekuensi ≤ 46,1 Hz</li><li>Daya ≥ 75 kW</li><li>Arus ≥ 157 A</li><li>Torsi ≥ 90%</li></ul></td><td data-label="3000 lps"><ul class="threshold-list"><li>Frekuensi ≤ 38 Hz</li><li>Daya ≥ 250 kW</li><li>Arus ≥ 517 A</li><li>Torsi ≥ 90%</li></ul></td><td data-label="5000 lps"><ul class="threshold-list"><li>Frekuensi ≤ 40 Hz</li><li>Daya ≥ 400 kW</li><li>Arus ≥ 867 A</li><li>Torsi ≥ 90%</li></ul></td>
+    </tr>
+<tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Dry run</h3>
+          <p>Frekuensi tepat di setpoint; daya, arus, dan torsi rendah. Semua 4 wajib.</p>
+        </div>
+      </th>
+      <td data-label="500 lps"><ul class="threshold-list"><li>Frekuensi = 46,1 Hz (2 desimal)</li><li>Daya ≤ 50,025 kW</li><li>Arus ≤ 100,48 A</li><li>Torsi &lt; 70%</li></ul></td><td data-label="3000 lps"><ul class="threshold-list"><li>Frekuensi = 38 Hz (2 desimal)</li><li>Daya ≤ 166,75 kW</li><li>Arus ≤ 330,88 A</li><li>Torsi &lt; 70%</li></ul></td><td data-label="5000 lps"><ul class="threshold-list"><li>Frekuensi = 40 Hz (2 desimal)</li><li>Daya ≤ 266,8 kW</li><li>Arus ≤ 554,88 A</li><li>Torsi &lt; 70%</li></ul></td>
+    </tr>
+<tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Panel overheat</h3>
+          <p>Salah satu dari tiga titik suhu mencapai 60 °C.</p>
+        </div>
+      </th>
+      <td colspan="3" data-label="Ambang global" class="matrix-global">
+        <span class="matrix-global-label">Global · semua tier</span>
+        <ul class="threshold-list"><li>Ambient ≥ 60 °C</li><li>Papan kontrol ≥ 60 °C</li><li>Inverter ≥ 60 °C</li></ul>
+      </td>
+    </tr>
+<tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Unbalance</h3>
+          <p>Salah satu fasa menyimpang 10% atau lebih dari rata-rata arus tiga fasa.</p>
+        </div>
+      </th>
+      <td colspan="3" data-label="Ambang global" class="matrix-global">
+        <span class="matrix-global-label">Global · semua tier</span>
+        <ul class="threshold-list"><li>Deviasi fasa maksimum ≥ 10%</li></ul>
+      </td>
+    </tr>
+<tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Undervoltage</h3>
+          <p>Tegangan masukan di bawah batas operasi.</p>
+        </div>
+      </th>
+      <td colspan="3" data-label="Ambang global" class="matrix-global">
+        <span class="matrix-global-label">Global · semua tier</span>
+        <ul class="threshold-list"><li>Tegangan &lt; 360 V</li></ul>
+      </td>
+    </tr>
+<tr>
+      <th scope="row">
+        <div class="matrix-rule">
+          <h3>Overvoltage</h3>
+          <p>Tegangan masukan di atas batas operasi.</p>
+        </div>
+      </th>
+      <td colspan="3" data-label="Ambang global" class="matrix-global">
+        <span class="matrix-global-label">Global · semua tier</span>
+        <ul class="threshold-list"><li>Tegangan &gt; 410 V</li></ul>
+      </td>
+    </tr>
+<tr>
+    <th scope="row">
+      <div class="matrix-rule">
+        <h3>Normal</h3>
+        <p>Tidak ada aturan yang cocok.</p>
+      </div>
+    </th>
+    <td colspan="3" data-label="Fallback" class="matrix-global">
+      <span class="matrix-global-label">Fallback · semua tier</span>
+      <p class="matrix-normal">Tidak ada aturan yang cocok → <strong>normal</strong>.</p>
+    </td>
+  </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">
+          Tanda <code>≤</code>/<code>≥</code> inklusif; <code>&lt;</code>/<code>&gt;</code>
+          ketat. Turbulensi memakai MA30 bila ada 30 pembacaan sebelumnya;
+          bila histori 1–29, referensinya CMA_n.
+        </p>
+      </section>
+
+      <section class="aturan-section" id="contoh" aria-labelledby="example-title">
+        <header class="section-head">
+          <h2 id="example-title">Contoh implementasi</h2>
+          <p>
+            Satu contoh per aturan tier, dibaca berdampingan untuk 500, 3000,
+            dan 5000 lps. Contoh bertanda <strong>terekam</strong> berasal dari
+            golden suite; <strong>turunan</strong> dijalankan lewat mesin yang
+            sama saat halaman dibangun.
+          </p>
+        </header>
+        <div class="example-stack">
+          <article class="example-group">
+      <header class="example-head">
+        <div>
+          <h3>Pompa tersangkut sampah</h3>
+          <p>Frekuensi ≤ 10 Hz wajib; minimal 3 dari 4 tanda beban terpenuhi.</p>
+        </div>
+        <span class="example-count">3 tier</span>
+      </header>
+      <div class="table-scroll example-scroll" tabindex="0" role="region" aria-label="Contoh Pompa tersangkut sampah per tier">
+        <table class="example-table">
+          <caption class="visually-hidden">Contoh Pompa tersangkut sampah untuk 500, 3000, dan 5000 lps</caption>
+          <thead>
+            <tr><th scope="col">Tier</th><th scope="col">Masukan</th><th scope="col">Hasil</th></tr>
+          </thead>
+          <tbody><tr>
+    <th scope="row">
+      <span class="tier-name">500 lps</span>
+      <span class="source-label" data-kind="turunan">turunan</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 8 Hz · daya 82,5 kW · arus 172,7 A · torsi 80% · putaran 900 RPM</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Pompa tersangkut sampah</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>freq=8,0 ≤ 10</li><li>power=82,5 ≥ 75</li><li>current=172,7 ≥ 157</li><li>speed=900,0 ≥ 100</li></ul>
+      <p class="source-detail">engine · 500 lps</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">3000 lps</span>
+      <span class="source-label" data-kind="turunan">turunan</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 8 Hz · daya 275 kW · arus 568,7 A · torsi 80% · putaran 900 RPM</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Pompa tersangkut sampah</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>freq=8,0 ≤ 10</li><li>power=275,0 ≥ 250</li><li>current=568,7 ≥ 517</li><li>speed=900,0 ≥ 100</li></ul>
+      <p class="source-detail">engine · 3000 lps</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">5000 lps</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 8 Hz · daya 450 kW · arus 900 A · torsi 115% · putaran 200 RPM</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Pompa tersangkut sampah</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>freq=8,0 ≤ 10</li><li>power=450,0 ≥ 400</li><li>current=900,0 ≥ 867</li><li>torque=115,0 ≥ 110%</li><li>speed=200,0 ≥ 100</li></ul><p class="example-also">Cocok juga: Banyak sampah</p><ul class="condition-list"><li>output_frequency=8,0 ≤ setpoint 40,0</li><li>output_power=450,0 ≥ 400</li><li>motor_current=900,0 ≥ 867</li><li>motor_torque=115,0 ≥ 90</li></ul>
+      <p class="source-detail">golden 02_pompa_tersangkut_sampah</p>
+    </td>
+  </tr></tbody>
+        </table>
+      </div>
+    </article>
+<article class="example-group">
+      <header class="example-head">
+        <div>
+          <h3>Turbulensi</h3>
+          <p>Frekuensi di bawah setpoint, arus menyimpang dari MA30/CMA, daya dan torsi di atas acuan. Semua 4 wajib.</p>
+        </div>
+        <span class="example-count">3 tier</span>
+      </header>
+      <div class="table-scroll example-scroll" tabindex="0" role="region" aria-label="Contoh Turbulensi per tier">
+        <table class="example-table">
+          <caption class="visually-hidden">Contoh Turbulensi untuk 500, 3000, dan 5000 lps</caption>
+          <thead>
+            <tr><th scope="col">Tier</th><th scope="col">Masukan</th><th scope="col">Hasil</th></tr>
+          </thead>
+          <tbody><tr>
+    <th scope="row">
+      <span class="tier-name">500 lps</span>
+      <span class="source-label" data-kind="turunan">turunan</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">bacaan 31 · frekuensi 41,1 Hz · daya 82,5 kW · torsi 95% · arus 93,5 A vs MA30 78,5 A</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Turbulensi</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>freq=41,1 &lt; setpoint 46,1</li><li>power=82,5 ≥ 75</li><li>current=93,5 vs MA30 78,5 Δ+15,0 |Δ| 15,0 ≥ 10</li><li>torque=95,0 ≥ 90%</li></ul>
+      <p class="source-detail">engine · 500 lps</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">3000 lps</span>
+      <span class="source-label" data-kind="turunan">turunan</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">bacaan 31 · frekuensi 33 Hz · daya 275 kW · torsi 95% · arus 273,5 A vs MA30 258,5 A</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Turbulensi</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>freq=33,0 &lt; setpoint 38,0</li><li>power=275,0 ≥ 250</li><li>current=273,5 vs MA30 258,5 Δ+15,0 |Δ| 15,0 ≥ 10</li><li>torque=95,0 ≥ 90%</li></ul>
+      <p class="source-detail">engine · 3000 lps</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">5000 lps</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">bacaan 31 · frekuensi 39 Hz · daya 450 kW · torsi 95% · arus 615 A vs MA30 550 A</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Turbulensi</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>freq=39,0 &lt; setpoint 40,0</li><li>power=450,0 ≥ 400</li><li>current=615,0 vs MA30 550,0 Δ+65,0 |Δ| 65,0 ≥ 10</li><li>torque=95,0 ≥ 90%</li></ul>
+      <p class="source-detail">golden 09_turbulensi_ma30</p>
+    </td>
+  </tr></tbody>
+        </table>
+      </div>
+    </article>
+<article class="example-group">
+      <header class="example-head">
+        <div>
+          <h3>Banyak sampah</h3>
+          <p>Frekuensi tidak melewati setpoint; daya, arus, dan torsi di atas acuan. Semua 4 wajib.</p>
+        </div>
+        <span class="example-count">3 tier</span>
+      </header>
+      <div class="table-scroll example-scroll" tabindex="0" role="region" aria-label="Contoh Banyak sampah per tier">
+        <table class="example-table">
+          <caption class="visually-hidden">Contoh Banyak sampah untuk 500, 3000, dan 5000 lps</caption>
+          <thead>
+            <tr><th scope="col">Tier</th><th scope="col">Masukan</th><th scope="col">Hasil</th></tr>
+          </thead>
+          <tbody><tr>
+    <th scope="row">
+      <span class="tier-name">500 lps</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 45 Hz · daya 100 kW · arus 200 A · torsi 95%</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Banyak sampah</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>output_frequency=45,0 ≤ setpoint 46,1</li><li>output_power=100,0 ≥ 75</li><li>motor_current=200,0 ≥ 157</li><li>motor_torque=95,0 ≥ 90</li></ul>
+      <p class="source-detail">golden 23_tier500_banyak_sampah</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">3000 lps</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 37 Hz · daya 260 kW · arus 550 A · torsi 95%</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Banyak sampah</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>output_frequency=37,0 ≤ setpoint 38,0</li><li>output_power=260,0 ≥ 250</li><li>motor_current=550,0 ≥ 517</li><li>motor_torque=95,0 ≥ 90</li></ul>
+      <p class="source-detail">golden 24_tier3000_banyak_sampah</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">5000 lps</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 39 Hz · daya 450 kW · arus 900 A · torsi 95%</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Banyak sampah</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>output_frequency=39,0 ≤ setpoint 40,0</li><li>output_power=450,0 ≥ 400</li><li>motor_current=900,0 ≥ 867</li><li>motor_torque=95,0 ≥ 90</li></ul>
+      <p class="source-detail">golden 03_banyak_sampah</p>
+    </td>
+  </tr></tbody>
+        </table>
+      </div>
+    </article>
+<article class="example-group">
+      <header class="example-head">
+        <div>
+          <h3>Dry run</h3>
+          <p>Frekuensi tepat di setpoint; daya, arus, dan torsi rendah. Semua 4 wajib.</p>
+        </div>
+        <span class="example-count">3 tier</span>
+      </header>
+      <div class="table-scroll example-scroll" tabindex="0" role="region" aria-label="Contoh Dry run per tier">
+        <table class="example-table">
+          <caption class="visually-hidden">Contoh Dry run untuk 500, 3000, dan 5000 lps</caption>
+          <thead>
+            <tr><th scope="col">Tier</th><th scope="col">Masukan</th><th scope="col">Hasil</th></tr>
+          </thead>
+          <tbody><tr>
+    <th scope="row">
+      <span class="tier-name">500 lps</span>
+      <span class="source-label" data-kind="turunan">turunan</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 46,1 Hz · daya 37,5 kW · arus 78,5 A · torsi 40%</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Dry run</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>DR_F: output_frequency=46,10 == setpoint 46,10</li><li>DR_C: output_power=37,5 ≤ DR_kW 50,0 (0,667*75)</li><li>DR_C: motor_current=78,5 ≤ DR_A 100,5 (0,64*157)</li><li>DR_C: motor_torque=40,0 &lt; 70</li></ul>
+      <p class="source-detail">engine · 500 lps</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">3000 lps</span>
+      <span class="source-label" data-kind="turunan">turunan</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 38 Hz · daya 125 kW · arus 258,5 A · torsi 40%</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Dry run</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>DR_F: output_frequency=38,00 == setpoint 38,00</li><li>DR_C: output_power=125,0 ≤ DR_kW 166,8 (0,667*250)</li><li>DR_C: motor_current=258,5 ≤ DR_A 330,9 (0,64*517)</li><li>DR_C: motor_torque=40,0 &lt; 70</li></ul>
+      <p class="source-detail">engine · 3000 lps</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">5000 lps</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 40 Hz · daya 100 kW · arus 300 A · torsi 40%</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Dry run</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>DR_F: output_frequency=40,00 == setpoint 40,00</li><li>DR_C: output_power=100,0 ≤ DR_kW 266,8 (0,667*400)</li><li>DR_C: motor_current=300,0 ≤ DR_A 554,9 (0,64*867)</li><li>DR_C: motor_torque=40,0 &lt; 70</li></ul>
+      <p class="source-detail">golden 04_dry_run</p>
+    </td>
+  </tr></tbody>
+        </table>
+      </div>
+    </article>
+        </div>
+        <article class="example-group">
+    <header class="example-head">
+      <div>
+        <h3>Aturan global</h3>
+        <p>Panel, unbalance, dan tegangan tidak bergantung pada ukuran pompa. Contoh diambil dari profil 5000 lps.</p>
+      </div>
+      <span class="example-count">5 contoh</span>
+    </header>
+    <div class="table-scroll example-scroll" tabindex="0" role="region" aria-label="Contoh aturan global">
+      <table class="example-table">
+        <caption class="visually-hidden">Contoh aturan global dan kondisi normal</caption>
+        <thead>
+          <tr><th scope="col">Cakupan</th><th scope="col">Masukan</th><th scope="col">Hasil</th></tr>
+        </thead>
+        <tbody><tr>
+    <th scope="row">
+      <span class="tier-name">Global</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">ambient 65 °C · papan kontrol 40 °C · inverter 45 °C</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Panel overheat</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>ambient_temperature=65,0 ≥ 60</li></ul>
+      <p class="source-detail">golden 08_panel_overheat</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">Global</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">fasa U 100 A · fasa V 100 A · fasa W 140 A</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Unbalance</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>unbalance OR: Eu 13,33% TRUE, Ev 13,33% TRUE, Ew -19,05% TRUE ≥ 10,00% (Ri 113,33)</li></ul>
+      <p class="source-detail">golden 05_unbalance</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">Global</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">tegangan 340 V</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Undervoltage</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>input_voltage 340,00 &lt; 360,00</li></ul>
+      <p class="source-detail">golden 06_undervoltage</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">Global</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">tegangan 415 V</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Overvoltage</strong> <span>trouble_type</span></p>
+      <ul class="condition-list"><li>input_voltage 415,00 &gt; 410,00</li></ul>
+      <p class="source-detail">golden 07_overvoltage</p>
+    </td>
+  </tr>
+<tr>
+    <th scope="row">
+      <span class="tier-name">Global</span>
+      <span class="source-label" data-kind="terekam">terekam</span>
+    </th>
+    <td data-label="Masukan"><p class="example-input">frekuensi 39 Hz · daya 100 kW · arus 200 A · torsi 40%</p></td>
+    <td data-label="Hasil">
+      <p class="example-result"><strong>Normal</strong> <span>trouble_type</span></p>
+      <p class="example-empty">Tidak ada aturan yang cocok.</p>
+      <p class="source-detail">golden 01_normal</p>
+    </td>
+  </tr></tbody>
+      </table>
+    </div>
+  </article>
+        <p class="table-note">
+          Contoh 5000 lps untuk seluruh diagnosis, termasuk kondisi normal,
+          tersedia di <a class="text-link" href="/">lembar diagnosa</a>.
+        </p>
+      </section>
+
+      <section class="aturan-section" id="mentah" aria-labelledby="raw-title">
+        <header class="section-head">
+          <h2 id="raw-title">Aturan mentah</h2>
+          <p>
+            Potongan <code>rules.json</code> per tier dan bagian global, tanpa
+            diubah. Gunakan blok ini untuk memeriksa <code>logic</code>,
+            <code>conditions</code>, dan nilai yang dibaca mesin.
+          </p>
+        </header>
+        <div class="raw-list">
+          <details class="raw-item">
+      <summary>
+        <span>500 lps</span>
+        <span class="raw-meta">4 aturan tier</span>
+      </summary>
+      <pre class="raw-code"><code>{
+  &quot;tier&quot;: &quot;500&quot;,
+  &quot;rules&quot;: {
+    &quot;POMPA_TERSANGKUT_SAMPAH&quot;: {
+      &quot;logic&quot;: &quot;PTS_F AND (PTS_Count&gt;=3) tanpa MEAN per-sample&quot;,
+      &quot;description&quot;: &quot;Pompa tersangkut sampah (PTS: freq&lt;=10 and &gt;=3 dari 4: kW/A/Torque/RPM)&quot;,
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 10,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;PTS_F&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 75,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;PTS_KW ref 75&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 157,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;PTS_A ref 157&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 110,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;PTS_T ref 110%&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_speed&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 100,
+          &quot;unit&quot;: &quot;RPM&quot;,
+          &quot;note&quot;: &quot;PTS_RPM ref 100&quot;
+        }
+      ]
+    },
+    &quot;TURBULENSI&quot;: {
+      &quot;logic&quot;: &quot;AND_STRICT_4_4&quot;,
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;not_reaching_setpoint&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;T_Freq&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 75,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;T_KW ref 75&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;deviation_from_ma&quot;,
+          &quot;window&quot;: 30,
+          &quot;threshold&quot;: 10,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;T_A |A-MA30|&gt;=10&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 90,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;T_T ref 90%&quot;
+        }
+      ],
+      &quot;description&quot;: &quot;Turbulensi (T_Freq AND T_KW AND T_A MA30 AND T_T, strict 4/4)&quot;
+    },
+    &quot;BANYAK_SAMPAH&quot;: {
+      &quot;logic&quot;: &quot;AND&quot;,
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;not_exceeding_setpoint&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;BS_F Freq&lt;=setpoint&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 75,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;BS_kW ref 75&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 157,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;BS_A ref 157&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 90,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;BS_T ref 90%&quot;
+        }
+      ],
+      &quot;description&quot;: &quot;Banyak sampah (BS_F Freq&lt;=sp AND BS_kW&gt;=ref AND BS_A&gt;=ref AND BS_T&gt;=90, strict 4/4)&quot;
+    },
+    &quot;DRY_RUN&quot;: {
+      &quot;logic&quot;: &quot;AND_STRICT_4_4&quot;,
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;==&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;DR_F F==sp raw 2 desimal&quot;,
+          &quot;group&quot;: &quot;DR_F&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 50.025,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;DR_kW = 0.667 * 75 (tier POMPA ref)&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 100.48,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;DR_A = 0.64 * 157 (tier POMPA ref)&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&lt;&quot;,
+          &quot;value&quot;: 70,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        }
+      ],
+      &quot;description&quot;: &quot;DryRun 2 tingkat: DR_F (F==sp raw 2des) + DR_C (0.667*ref kW + 0.64*ref A + torque&lt;70)&quot;,
+      &quot;freq_sustain&quot;: 1,
+      &quot;count_trigger&quot;: 1
+    }
+  }
+}</code></pre>
+    </details>
+<details class="raw-item">
+      <summary>
+        <span>3000 lps</span>
+        <span class="raw-meta">4 aturan tier</span>
+      </summary>
+      <pre class="raw-code"><code>{
+  &quot;tier&quot;: &quot;3000&quot;,
+  &quot;rules&quot;: {
+    &quot;POMPA_TERSANGKUT_SAMPAH&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 10,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;PTS_F&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 250,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;PTS_KW ref 250&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 517,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;PTS_A ref 517&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 110,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;PTS_T ref 110%&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_speed&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 100,
+          &quot;unit&quot;: &quot;RPM&quot;,
+          &quot;note&quot;: &quot;PTS_RPM ref 100&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;PTS_F AND (PTS_Count&gt;=3) tanpa MEAN per-sample&quot;,
+      &quot;description&quot;: &quot;Pompa tersangkut sampah (PTS: freq&lt;=10 and &gt;=3 dari 4: kW/A/Torque/RPM)&quot;
+    },
+    &quot;TURBULENSI&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;not_reaching_setpoint&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;T_Freq&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 250,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;T_KW ref 250&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;deviation_from_ma&quot;,
+          &quot;window&quot;: 30,
+          &quot;threshold&quot;: 10,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;T_A |A-MA30|&gt;=10&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 90,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;T_T ref 90%&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;AND_STRICT_4_4&quot;,
+      &quot;description&quot;: &quot;Turbulensi (T_Freq AND T_KW AND T_A MA30 AND T_T, strict 4/4)&quot;
+    },
+    &quot;BANYAK_SAMPAH&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;not_exceeding_setpoint&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;BS_F Freq&lt;=setpoint&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 250,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;BS_kW ref 250&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 517,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;BS_A ref 517&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 90,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;BS_T ref 90%&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;AND&quot;,
+      &quot;description&quot;: &quot;Banyak sampah (BS_F Freq&lt;=sp AND BS_kW&gt;=ref AND BS_A&gt;=ref AND BS_T&gt;=90, strict 4/4)&quot;
+    },
+    &quot;DRY_RUN&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;==&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;DR_F F==sp raw 2 desimal&quot;,
+          &quot;group&quot;: &quot;DR_F&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 166.75,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;DR_kW = 0.667 * 250 (tier POMPA ref)&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 330.88,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;DR_A = 0.64 * 517 (tier POMPA ref)&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&lt;&quot;,
+          &quot;value&quot;: 70,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;AND_STRICT_4_4&quot;,
+      &quot;description&quot;: &quot;DryRun 2 tingkat: DR_F (F==sp raw 2des) + DR_C (0.667*ref kW + 0.64*ref A + torque&lt;70)&quot;,
+      &quot;freq_sustain&quot;: 1,
+      &quot;count_trigger&quot;: 1
+    }
+  }
+}</code></pre>
+    </details>
+<details class="raw-item">
+      <summary>
+        <span>5000 lps</span>
+        <span class="raw-meta">4 aturan tier</span>
+      </summary>
+      <pre class="raw-code"><code>{
+  &quot;tier&quot;: &quot;5000&quot;,
+  &quot;rules&quot;: {
+    &quot;POMPA_TERSANGKUT_SAMPAH&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 10,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;PTS_F&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 400,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;PTS_KW ref 400&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 867,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;PTS_A ref 867&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 110,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;PTS_T ref 110%&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_speed&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 100,
+          &quot;unit&quot;: &quot;RPM&quot;,
+          &quot;note&quot;: &quot;PTS_RPM ref 100&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;PTS_F AND (PTS_Count&gt;=3) tanpa MEAN per-sample&quot;,
+      &quot;description&quot;: &quot;Pompa tersangkut sampah (PTS: freq&lt;=10 and &gt;=3 dari 4: kW/A/Torque/RPM)&quot;
+    },
+    &quot;TURBULENSI&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;not_reaching_setpoint&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;T_Freq&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 400,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;T_KW ref 400&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;deviation_from_ma&quot;,
+          &quot;window&quot;: 30,
+          &quot;threshold&quot;: 10,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;T_A |A-MA30|&gt;=10&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 90,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;T_T ref 90%&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;AND_STRICT_4_4&quot;,
+      &quot;description&quot;: &quot;Turbulensi (T_Freq AND T_KW AND T_A MA30 AND T_T, strict 4/4)&quot;
+    },
+    &quot;BANYAK_SAMPAH&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;not_exceeding_setpoint&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;BS_F Freq&lt;=setpoint&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 400,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;BS_kW ref 400&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 867,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;BS_A ref 867&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&gt;=&quot;,
+          &quot;value&quot;: 90,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;note&quot;: &quot;BS_T ref 90%&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;AND&quot;,
+      &quot;description&quot;: &quot;Banyak sampah (BS_F Freq&lt;=sp AND BS_kW&gt;=ref AND BS_A&gt;=ref AND BS_T&gt;=90, strict 4/4)&quot;
+    },
+    &quot;DRY_RUN&quot;: {
+      &quot;conditions&quot;: [
+        {
+          &quot;field&quot;: &quot;output_frequency&quot;,
+          &quot;op&quot;: &quot;==&quot;,
+          &quot;ref&quot;: &quot;setpoint_freq&quot;,
+          &quot;unit&quot;: &quot;Hz&quot;,
+          &quot;note&quot;: &quot;DR_F F==sp raw 2 desimal&quot;,
+          &quot;group&quot;: &quot;DR_F&quot;
+        },
+        {
+          &quot;field&quot;: &quot;output_power&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 266.8,
+          &quot;unit&quot;: &quot;kW&quot;,
+          &quot;note&quot;: &quot;DR_kW = 0.667 * 400 (tier POMPA ref)&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_current&quot;,
+          &quot;op&quot;: &quot;&lt;=&quot;,
+          &quot;value&quot;: 554.88,
+          &quot;unit&quot;: &quot;A&quot;,
+          &quot;note&quot;: &quot;DR_A = 0.64 * 867 (tier POMPA ref)&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        },
+        {
+          &quot;field&quot;: &quot;motor_torque&quot;,
+          &quot;op&quot;: &quot;&lt;&quot;,
+          &quot;value&quot;: 70,
+          &quot;unit&quot;: &quot;%&quot;,
+          &quot;group&quot;: &quot;DR_C&quot;
+        }
+      ],
+      &quot;logic&quot;: &quot;AND_STRICT_4_4&quot;,
+      &quot;description&quot;: &quot;DryRun 2 tingkat: DR_F (F==sp raw 2des) + DR_C (0.667*ref kW + 0.64*ref A + torque&lt;70)&quot;,
+      &quot;freq_sustain&quot;: 1,
+      &quot;count_trigger&quot;: 1
+    }
+  }
+}</code></pre>
+    </details>
+<details class="raw-item">
+    <summary>
+      <span>Global</span>
+      <span class="raw-meta">panel + capability rules</span>
+    </summary>
+    <pre class="raw-code"><code>{
+  &quot;panel_overheat&quot;: {
+    &quot;rules&quot;: {
+      &quot;PANEL_OVERHEAT&quot;: {
+        &quot;conditions&quot;: [
+          {
+            &quot;field&quot;: &quot;ambient_temperature&quot;,
+            &quot;op&quot;: &quot;&gt;=&quot;,
+            &quot;value&quot;: 60,
+            &quot;unit&quot;: &quot;C&quot;
+          },
+          {
+            &quot;field&quot;: &quot;control_board_temperature&quot;,
+            &quot;op&quot;: &quot;&gt;=&quot;,
+            &quot;value&quot;: 60,
+            &quot;unit&quot;: &quot;C&quot;
+          },
+          {
+            &quot;field&quot;: &quot;inverter_temperature&quot;,
+            &quot;op&quot;: &quot;&gt;=&quot;,
+            &quot;value&quot;: 60,
+            &quot;unit&quot;: &quot;C&quot;
+          }
+        ],
+        &quot;logic&quot;: &quot;OR&quot;,
+        &quot;description&quot;: &quot;Panel overheat&quot;
+      }
+    }
+  },
+  &quot;capability_rules&quot;: {
+    &quot;UNBALANCE&quot;: {
+      &quot;method&quot;: &quot;max_phase_deviation_from_average&quot;,
+      &quot;operator&quot;: &quot;&gt;=&quot;,
+      &quot;threshold_pct&quot;: 10
+    },
+    &quot;UNDERVOLTAGE&quot;: {
+      &quot;field&quot;: &quot;input_voltage&quot;,
+      &quot;operator&quot;: &quot;&lt;&quot;,
+      &quot;threshold_v&quot;: 360
+    },
+    &quot;OVERVOLTAGE&quot;: {
+      &quot;field&quot;: &quot;input_voltage&quot;,
+      &quot;operator&quot;: &quot;&gt;&quot;,
+      &quot;threshold_v&quot;: 410
+    }
+  }
+}</code></pre>
+  </details>
+        </div>
+        <p class="source-note">
+          Halaman ini dibangun dari <code>backend-node/src/engine/rules.json</code>,
+          <code>profile_setpoints.json</code>, dan golden suite. Bukan panggilan
+          API live.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <span>DEXMIN · Klasifikasi gangguan pompa</span>
+        <span class="footer-meta">
+          <span>rules.json v1.1</span>
+          <span>3 tier · 8 aturan</span>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

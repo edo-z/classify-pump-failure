@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aturan — DEXMIN</title>
+    <meta
+      name="description"
+      content="Aturan klasifikasi pompa apa adanya: ambang untuk 500, 3000, dan 5000 lps, contoh implementasi, serta JSON sumber."
+    />
+    <!-- impeccable-disable overused-font -- DESIGN.md pins Inter as the only family -->
+    <!-- impeccable-disable cramped-padding -- table cells and raw summaries supply 14px inset -->
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Lewati ke konten</a>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/" aria-label="DEXMIN, beranda">
+          <span class="monogram" aria-hidden="true">D</span>
+          <span class="brand-text">
+            <span class="brand-name">DEXMIN</span>
+            <span class="brand-sub">Klasifikasi gangguan pompa</span>
+          </span>
+        </a>
+        <div class="topbar-meta">
+          <a class="topbar-link" href="/">Diagnosa</a>
+          <a class="topbar-link" href="/#kontrak">Kontrak API</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page aturan-page" id="main">
+      <section class="intro aturan-intro" aria-labelledby="page-title">
+        <h1 id="page-title">Aturan, sampai ke ambang.</h1>
+        <p class="lede">
+          Delapan aturan, tiga ukuran pompa, satu urutan evaluasi. Halaman ini
+          membuka ambang yang dipakai mesin, contoh yang lolos di tiap tier,
+          dan JSON sumbernya. Semua aturan dinilai; diagnosis hanya yang pertama
+          cocok.
+        </p>
+        <dl class="rule-facts">
+          <div>
+            <dt>Sumber</dt>
+            <dd>rules.json v{{RULE_VERSION}}</dd>
+          </div>
+          <div>
+            <dt>Cakupan</dt>
+            <dd>500 · 3000 · 5000 lps</dd>
+          </div>
+          <div>
+            <dt>Aturan</dt>
+            <dd>8 aturan + normal</dd>
+          </div>
+        </dl>
+        <div class="actions">
+          <a class="button-primary" href="#contoh">Lihat contoh</a>
+          <a class="button-ghost" href="/">Kembali ke diagnosa</a>
+        </div>
+      </section>
+
+      <section class="aturan-section" id="urutan" aria-labelledby="order-title">
+        <header class="section-head">
+          <h2 id="order-title">Urutan evaluasi</h2>
+          <p>
+            Aturan tier berjalan lebih dulu, lalu panel, unbalance, dan
+            tegangan. Bila beberapa aturan cocok, semuanya dicatat di
+            <code>matched_rules</code>. <code>trouble_type</code> adalah yang
+            pertama secara teknis, bukan peringkat bahaya.
+          </p>
+        </header>
+
+        <div class="order-grid">
+          <ol class="order-list">
+            <li>
+              <span class="order-number">01</span>
+              <div>
+                <h3>Empat aturan tier</h3>
+                <p>Pompa tersangkut sampah → turbulensi → banyak sampah → dry run.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">02</span>
+              <div>
+                <h3>Panel</h3>
+                <p>Salah satu dari tiga suhu panel mencapai 60 °C.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">03</span>
+              <div>
+                <h3>Unbalance</h3>
+                <p>Deviasi fasa maksimum mencapai 10%.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">04</span>
+              <div>
+                <h3>Tegangan</h3>
+                <p>Undervoltage di bawah 360 V, overvoltage di atas 410 V.</p>
+              </div>
+            </li>
+            <li>
+              <span class="order-number">05</span>
+              <div>
+                <h3>Normal</h3>
+                <p>Fallback bila tidak ada satu pun aturan yang cocok.</p>
+              </div>
+            </li>
+          </ol>
+
+          <div class="setpoint-panel">
+            <h3>Setpoint operasi</h3>
+            <p>
+              Frekuensi dipakai oleh turbulensi, banyak sampah, dan dry run.
+              Nilai ini berasal dari <code>profile_setpoints.json</code>, bukan
+              dari batas daya/arus pompa.
+            </p>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Setpoint operasi per tier">
+              <table class="setpoint-table">
+                <caption class="visually-hidden">Setpoint operasi 500, 3000, dan 5000 lps</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Profil</th>
+                    <th scope="col">Frekuensi</th>
+                    <th scope="col">Putaran</th>
+                    <th scope="col">Torsi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{SETPOINT_ROWS}}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="aturan-section" id="matriks" aria-labelledby="matrix-title">
+        <header class="section-head">
+          <h2 id="matrix-title">Matriks ambang</h2>
+          <p>
+            Ambang yang sama, dibaca untuk tiga tier. Aturan global ditandai
+            terpisah karena tidak berubah mengikuti ukuran pompa. Data hilang
+            dianggap tidak memenuhi syarat, bukan nol.
+          </p>
+        </header>
+        <div class="table-scroll matrix-scroll" tabindex="0" role="region" aria-label="Matriks ambang aturan per tier">
+          <table class="matrix-table">
+            <caption class="visually-hidden">Ambang delapan aturan untuk 500, 3000, dan 5000 lps</caption>
+            <thead>
+              <tr>
+                <th scope="col">Aturan</th>
+                <th scope="col">500 lps</th>
+                <th scope="col">3000 lps</th>
+                <th scope="col">5000 lps</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{MATRIX_ROWS}}
+            </tbody>
+          </table>
+        </div>
+        <p class="table-note">
+          Tanda <code>≤</code>/<code>≥</code> inklusif; <code>&lt;</code>/<code>&gt;</code>
+          ketat. Turbulensi memakai MA30 bila ada 30 pembacaan sebelumnya;
+          bila histori 1–29, referensinya CMA_n.
+        </p>
+      </section>
+
+      <section class="aturan-section" id="contoh" aria-labelledby="example-title">
+        <header class="section-head">
+          <h2 id="example-title">Contoh implementasi</h2>
+          <p>
+            Satu contoh per aturan tier, dibaca berdampingan untuk 500, 3000,
+            dan 5000 lps. Contoh bertanda <strong>terekam</strong> berasal dari
+            golden suite; <strong>turunan</strong> dijalankan lewat mesin yang
+            sama saat halaman dibangun.
+          </p>
+        </header>
+        <div class="example-stack">
+          {{TIER_EXAMPLE_GROUPS}}
+        </div>
+        {{GLOBAL_EXAMPLES}}
+        <p class="table-note">
+          Contoh 5000 lps untuk seluruh diagnosis, termasuk kondisi normal,
+          tersedia di <a class="text-link" href="/">lembar diagnosa</a>.
+        </p>
+      </section>
+
+      <section class="aturan-section" id="mentah" aria-labelledby="raw-title">
+        <header class="section-head">
+          <h2 id="raw-title">Aturan mentah</h2>
+          <p>
+            Potongan <code>rules.json</code> per tier dan bagian global, tanpa
+            diubah. Gunakan blok ini untuk memeriksa <code>logic</code>,
+            <code>conditions</code>, dan nilai yang dibaca mesin.
+          </p>
+        </header>
+        <div class="raw-list">
+          {{RAW_BLOCKS}}
+        </div>
+        <p class="source-note">
+          Halaman ini dibangun dari <code>backend-node/src/engine/rules.json</code>,
+          <code>profile_setpoints.json</code>, dan golden suite. Bukan panggilan
+          API live.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <span>DEXMIN · Klasifikasi gangguan pompa</span>
+        <span class="footer-meta">
+          <span>rules.json v{{RULE_VERSION}}</span>
+          <span>3 tier · 8 aturan</span>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

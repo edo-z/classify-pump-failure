@@ -19,6 +19,8 @@ const PORT = Number(process.env.PORT ?? 3030);
 const ALLOWED = new Map([
   ["/", { file: "index.html", type: "text/html; charset=utf-8" }],
   ["/index.html", { file: "index.html", type: "text/html; charset=utf-8" }],
+  ["/aturan", { file: "aturan.html", type: "text/html; charset=utf-8" }],
+  ["/aturan.html", { file: "aturan.html", type: "text/html; charset=utf-8" }],
   ["/styles.css", { file: "styles.css", type: "text/css; charset=utf-8" }],
   ["/app.js", { file: "app.js", type: "text/javascript; charset=utf-8" }],
   ["/data.json", { file: "data.json", type: "application/json; charset=utf-8" }],
@@ -82,7 +84,10 @@ const server = createServer(async (request, response) => {
       "content-type": entry.type,
       "content-length": String(body.byteLength),
       "cache-control":
-        entry.file === "index.html" || entry.file === "data.json"
+        entry.file.endsWith(".html") ||
+        entry.file === "styles.css" ||
+        entry.file === "app.js" ||
+        entry.file === "data.json"
           ? "no-cache"
           : "public, max-age=3600",
     });
