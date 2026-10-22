@@ -24,6 +24,7 @@ const ALLOWED = new Map([
   ["/styles.css", { file: "styles.css", type: "text/css; charset=utf-8" }],
   ["/app.js", { file: "app.js", type: "text/javascript; charset=utf-8" }],
   ["/data.json", { file: "data.json", type: "application/json; charset=utf-8" }],
+  ["/js/socket.io.min.js", { file: "js/socket.io.min.js", type: "text/javascript; charset=utf-8" }],
 ]);
 
 const SECURITY_HEADERS = {

@@ -117,8 +117,8 @@
           </p>
           <dl class="contract-facts">
             <div>
-              <dt>Metode</dt>
-              <dd>POST /classify</dd>
+              <dt>Transport</dt>
+              <dd>Socket.IO event `classify`</dd>
             </div>
             <div>
               <dt>Readings</dt>
@@ -130,12 +130,10 @@
             </div>
             <div>
               <dt>Jawaban</dt>
-              <dd>200 diagnosis · 422 input tidak valid</dd>
+              <dd>Ack envelope `{ok: true, data: ...}`</dd>
             </div>
           </dl>
-          <a class="text-link" href="https://class-api.aldozeno.my.id/health" rel="noreferrer">
-            Buka health API
-          </a>
+          <span class="text-muted">Status API dipantau via event `health`.</span>
         </div>
 
         <div class="code-block">
@@ -159,6 +157,7 @@
       </div>
     </footer>
 
+    <script src="/js/socket.io.min.js" defer></script>
     <script src="/app.js" defer></script>
   </body>
 </html>

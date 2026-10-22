@@ -1,4 +1,4 @@
-const API_HEALTH = "https://class-api.aldozeno.my.id/health";
+const API_HOST = "https://class-api.aldozeno.my.id";
 const DATA_URL = "/data.json";
 const REFRESH_MS = 30_000;
 const TIMEOUT_MS = 8_000;
@@ -321,7 +321,10 @@ function renderRules(item) {
 
 function renderCurl(item) {
   const payload = JSON.stringify(item.input, null, 2);
-  state.curl = `curl -X POST https://class-api.aldozeno.my.id/classify \\\n  -H 'content-type: application/json' \\\n  -d '${payload}'`;
+  state.curl = `socket.emit("classify", ${payload}, (response) => {
+  if (response.ok) console.log(response.data);
+  else console.error(response.error);
+});`;
   ui.curlCode.textContent = state.curl;
   ui.codeCase.textContent = item.label;
 }
@@ -426,19 +429,37 @@ function setStatus(stateName, label) {
   }
 }
 
+let socket;
+
+function initSocket() {
+  socket = io(API_HOST);
+
+  socket.on("connect", () => {
+    console.log("[landing] connected to API");
+    refreshHealth();
+  });
+
+  socket.on("disconnect", () => {
+    setStatus("offline", "Koneksi terputus");
+    ui.footerHealth.textContent = "Status API tidak tersedia";
+  });
+}
+
 async function refreshHealth() {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), TIMEOUT_MS);
+  if (!socket || !socket.connected) {
+    setStatus("offline", "API tidak terjangkau");
+    ui.footerHealth.textContent = "Status API tidak tersedia";
+    return;
+  }
 
-  try {
-    const response = await fetch(API_HEALTH, {
-      signal: controller.signal,
-      cache: "no-store",
-      headers: { accept: "application/json" },
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  socket.emit("health", (response) => {
+    if (!response || !response.ok) {
+      setStatus("offline", "API tidak merespons");
+      ui.footerHealth.textContent = "Status API tidak tersedia";
+      return;
+    }
 
-    const health = await response.json();
+    const health = response.data;
     const healthy =
       health.status === "ok" &&
       health.rules_loaded !== false &&
@@ -446,49 +467,20 @@ async function refreshHealth() {
 
     if (health.status === "ok" && healthy) {
       setStatus("ok", "API operasional");
-      ui.footerHealth.textContent = "Aturan siap · setpoint siap";
+      ui.footerHealth.textContent = "Aturan siap";
     } else if (health.status === "ok") {
       setStatus("degraded", "API perlu diperiksa");
-      ui.footerHealth.textContent =
-        health.rules_loaded === false ? "Aturan bermasalah" : "Setpoint bermasalah";
+      ui.footerHealth.textContent = "Aturan bermasalah";
     } else {
       setStatus("degraded", "API degraded");
-      ui.footerHealth.textContent = "Aturan atau setpoint bermasalah";
+      ui.footerHealth.textContent = "Aturan bermasalah";
     }
-  } catch {
-    setStatus("offline", "API tidak terjangkau");
-    ui.footerHealth.textContent = "Status API tidak tersedia";
-  } finally {
-    window.clearTimeout(timer);
     ui.footerChecked.textContent = `Diperiksa ${formatClock()}`;
-  }
+  });
 }
 
-ui.copyCurl.addEventListener("click", () => {
-  if (!state.curl) return;
-  copyText(
-    state.curl,
-    ui.copyFeedback,
-    "Panggilan tersalin. Tempel di terminal.",
-    "Tidak bisa menyalin otomatis. Teks panggilan dipilih; tekan Ctrl+C.",
-  );
-});
-
-ui.copyCode.addEventListener("click", async () => {
-  if (!state.curl) return;
-  const copied = await copyText(
-    state.curl,
-    ui.codeFeedback,
-    "Tersalin.",
-    "Tidak bisa menyalin otomatis. Teks dipilih; tekan Ctrl+C.",
-  );
-  if (copied) flashButton(ui.copyCode, "Tersalin");
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") refreshHealth();
-});
-
+// Initialize
+initSocket();
 loadData();
 refreshHealth();
 window.setInterval(refreshHealth, REFRESH_MS);
