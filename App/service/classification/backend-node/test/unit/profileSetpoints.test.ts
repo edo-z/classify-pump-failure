@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { parseUpdate } from "../../src/api/profileSetpoints.ts";
+import { parseUpdate } from "../../src/application/setpoints.ts";
 import {
   loadProfileSetpoints,
   saveProfileSetpoint,

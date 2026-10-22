@@ -1,22 +1,17 @@
-/**
- * Fastify server assembly — 1:1 port of ``app/main.py``.
- *
- * Endpoints: POST /classify, GET /profile-setpoints[/:id],
- * PUT /profile-setpoints/:id, GET /health, GET /.
- */
-
-import { readFileSync } from "node:fs";
+import "dotenv/config";
 
 import Fastify, { type FastifyInstance } from "fastify";
+import { Server, type ServerOptions } from "socket.io";
 
 import { registerClassifyRoutes } from "./api/classify.ts";
 import { registerProfileSetpointRoutes } from "./api/profileSetpoints.ts";
-import { RULES_FILE } from "./engine/engine.ts";
-import {
-  PROFILE_SETPOINTS_FILE,
-  loadProfileSetpoints,
-} from "./engine/setpoints.ts";
+import { getHealthStatus } from "./application/health.ts";
 import { registerApiKey } from "./middleware/apiKey.ts";
+import { startSocketBridge } from "./socket/bridge.ts";
+import {
+  registerSocketHandlers,
+  type SocketHandlerDeps,
+} from "./socket/handlers.ts";
 
 export function buildApp(): FastifyInstance {
   const app = Fastify({ logger: false });
@@ -35,52 +30,7 @@ export function buildApp(): FastifyInstance {
   registerProfileSetpointRoutes(app);
   registerClassifyRoutes(app);
 
-  app.get("/health", async () => {
-    let rulesExists = false;
-    let rulesLoaded = false;
-    let rulesError: string | null = null;
-    try {
-      const data = JSON.parse(readFileSync(RULES_FILE, "utf-8")) as unknown;
-      rulesExists = true;
-      rulesLoaded =
-        typeof data === "object" && data !== null && "tiers" in (data as object);
-      if (!rulesLoaded) rulesError = "invalid schema: missing 'tiers'";
-    } catch (exc) {
-      if ((exc as NodeJS.ErrnoException).code !== "ENOENT") {
-        rulesExists = true;
-        rulesError = exc instanceof SyntaxError ? "invalid JSON" : "unreadable";
-      }
-    }
-
-    let setpointsExists = false;
-    let setpointsLoaded = false;
-    let setpointsError: string | null = null;
-    try {
-      readFileSync(PROFILE_SETPOINTS_FILE, "utf-8");
-      setpointsExists = true;
-      loadProfileSetpoints();
-      setpointsLoaded = true;
-    } catch (exc) {
-      if ((exc as NodeJS.ErrnoException).code !== "ENOENT") {
-        setpointsExists = true;
-        setpointsError =
-          exc instanceof SyntaxError ? "invalid JSON" : "unreadable";
-      } else {
-        // Missing file is valid: defaults (null) apply.
-        setpointsLoaded = true;
-      }
-    }
-
-    return {
-      status: rulesLoaded && setpointsLoaded ? "ok" : "degraded",
-      rules_exists: rulesExists,
-      rules_loaded: rulesLoaded,
-      rules_error: rulesError,
-      setpoints_exists: setpointsExists,
-      setpoints_loaded: setpointsLoaded,
-      setpoints_error: setpointsError,
-    };
-  });
+  app.get("/health", async () => getHealthStatus());
 
   app.get("/", async () => ({
     service: "Pump Trouble Classification",
@@ -112,11 +62,100 @@ export function buildApp(): FastifyInstance {
   return app;
 }
 
-async function main(): Promise<void> {
+function socketOptions(): Partial<ServerOptions> {
+  const origin = (process.env.CLASSIFICATION_SOCKET_ORIGIN ?? "").trim();
+  return {
+    path: "/socket.io",
+    serveClient: false,
+    maxHttpBufferSize: 1_000_000,
+    ...(origin
+      ? {
+          cors: {
+            origin: origin
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean),
+          },
+        }
+      : {}),
+  };
+}
+
+export interface StartServerOptions {
+  port?: number;
+  host?: string;
+  startBridge?: boolean;
+  socketDeps?: SocketHandlerDeps;
+}
+
+export interface RunningServer {
+  app: FastifyInstance;
+  io: Server;
+  upstream: ReturnType<typeof startSocketBridge>;
+  host: string;
+  port: number;
+  close: () => Promise<void>;
+}
+
+export async function startServer(
+  options: StartServerOptions = {},
+): Promise<RunningServer> {
   const app = buildApp();
-  const port = Number(process.env.PORT ?? 3031);
-  const host = process.env.HOST ?? "127.0.0.1";
-  await app.listen({ port, host });
+  const io = new Server(app.server, socketOptions());
+  registerSocketHandlers(io, options.socketDeps);
+
+  const host = options.host ?? process.env.HOST ?? "127.0.0.1";
+  const requestedPort = options.port ?? Number(process.env.PORT ?? 3031);
+
+  await app.listen({ port: requestedPort, host });
+
+  const address = app.server.address();
+  const port =
+    typeof address === "object" && address !== null
+      ? address.port
+      : requestedPort;
+
+  const upstream = options.startBridge ? startSocketBridge(io) : null;
+  let closing = false;
+
+  const close = async (): Promise<void> => {
+    if (closing) return;
+    closing = true;
+    upstream?.disconnect();
+    await new Promise<void>((resolve) => io.close(() => resolve()));
+    try {
+      await app.close();
+    } catch (exc) {
+      if ((exc as NodeJS.ErrnoException).code !== "ERR_SERVER_NOT_RUNNING") {
+        throw exc;
+      }
+    }
+  };
+
+  return { app, io, upstream, host, port, close };
+}
+
+async function main(): Promise<void> {
+  const server = await startServer({ startBridge: true });
+  console.log(
+    `[classify] listening on http://${server.host}:${server.port} (HTTP + Socket.IO)`,
+  );
+
+  let shuttingDown = false;
+  const shutdown = (): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    server
+      .close()
+      .then(() => process.exit(0))
+      .catch((err) => {
+        console.error("[classify] shutdown error:", err);
+        process.exit(1);
+      });
+  };
+
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
 }
 
 const isMain =

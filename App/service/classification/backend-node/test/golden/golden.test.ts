@@ -16,15 +16,13 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { buildApp } from "../../src/server.ts";
+import { classifyRequest } from "../../src/application/classify.ts";
 
 const GOLDEN_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const cases = readdirSync(GOLDEN_DIR)
   .filter((f) => f.endsWith(".input.json"))
   .sort();
-
-const app = buildApp();
 
 test("golden fixtures exist", () => {
   assert.ok(cases.length >= 20, `expected at least 20 scenarios, got ${cases.length}`);
@@ -37,14 +35,9 @@ for (const file of cases) {
     const expected = JSON.parse(
       readFileSync(path.join(GOLDEN_DIR, `${name}.expected.json`), "utf-8"),
     );
-    const response = await app.inject({
-      method: "POST",
-      url: "/classify",
-      payload: body,
-    });
-    assert.equal(response.statusCode, 200, `${name}: ${response.body}`);
+    const response = classifyRequest(body);
     assert.deepStrictEqual(
-      response.json(),
+      response,
       expected,
       `${name}: classification output changed`,
     );

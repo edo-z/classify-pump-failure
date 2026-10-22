@@ -13,7 +13,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { buildApp } from "../../src/server.ts";
+import { classifyRequest } from "../../src/application/classify.ts";
+import { NotFoundError, ValidationError } from "../../src/application/errors.ts";
 
 interface FrozenCase {
   request: Record<string, unknown>;
@@ -25,19 +26,24 @@ const fixtures = JSON.parse(
   readFileSync(new URL("./frozen.json", import.meta.url), "utf-8"),
 ) as FrozenCase[];
 
-const app = buildApp();
-
-test("400 frozen differential cases match the Python oracle", async () => {
+test("400 frozen differential cases match the Python oracle", () => {
   assert.equal(fixtures.length, 400);
   for (const [i, fixture] of fixtures.entries()) {
-    const response = await app.inject({
-      method: "POST",
-      url: "/classify",
-      payload: fixture.request,
-    });
-    assert.equal(response.statusCode, fixture.status, `case ${i}: status`);
-    if (fixture.status === 200) {
-      assert.deepEqual(response.json(), fixture.body, `case ${i}: body`);
+    let status = 200;
+    let body: unknown;
+    try {
+      body = classifyRequest(fixture.request);
+    } catch (exc) {
+      if (exc instanceof NotFoundError || exc instanceof ValidationError) {
+        status = exc.status;
+        body = { detail: exc.message };
+      } else {
+        throw exc;
+      }
+    }
+    assert.equal(status, fixture.status, `case ${i}: status`);
+    if (status === 200) {
+      assert.deepEqual(body, fixture.body, `case ${i}: body`);
     }
   }
 });
