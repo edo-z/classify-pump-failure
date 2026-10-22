@@ -21,7 +21,7 @@ Satu mesin aturan yang sama menilai semua data dan menampilkan ambang, contoh, s
 ## Operating Context
 
 - Alur kerja: pilih contoh diagnosis di landing atau kirim `readings` ke `POST /classify`, lalu baca `trouble_type`, `matched_rules`, `sensor_snapshot`, dan `limitations`.
-- Lingkungan: landing statis (`:3030`, di belakang tunnel Cloudflare) dan backend Node.js (`:3031`). Tidak ada aplikasi Next.js, chat, atau RAG.
+- Lingkungan: landing statis (`:3030`, di belakang tunnel Cloudflare) dan backend Node.js (`:3031`). DDL kanonis: `App/service/schema/dexmin/dexmin.sql` (7 tabel); backend belum memakai koneksi MySQL. Tidak ada aplikasi Next.js, chat, atau RAG.
 - Ritual mutu: typecheck + backend tests + landing smoke + pemeriksaan generator sebelum deploy.
 
 ## Capabilities and Constraints
@@ -40,7 +40,7 @@ Satu mesin aturan yang sama menilai semua data dan menampilkan ambang, contoh, s
 
 ## Evidence on Hand
 
-- Dataset: `Data/classification-input/raw/aldo_pump_logs_2.csv` (+ metadata/normalized).
+- DDL kanonis: `App/service/schema/dexmin/dexmin.sql` (7 tabel, kontrak arsitektur).
 - Dokumen manual pompa: `Docs/` (ATV610, ACS580/ACQ580, D32).
 - Backend: golden suite + 400 kasus differential di `App/service/classification/backend-node/test/`.
 - Landing: smoke test CI + generator `--check` untuk `data.json` dan `aturan.html`.

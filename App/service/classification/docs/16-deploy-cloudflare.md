@@ -5,11 +5,12 @@ Mapping: `classify.aldozeno.my.id` → `localhost:3030` (**landing statis**),
 Mesin 24/7 + linger aktif.
 
 > 2026-10-21: frontend Next.js dan unit `classify-pump-frontend` dihapus.
-> Hanya landing dan backend yang berjalan.
+> Hanya landing dan backend yang berjalan; schema DB adalah kontrak statis.
 
 ## Komponen
 - `~/.cloudflared/config.yml` (tunnel `classify-pump`, catch-all 404)
 - `backend-node/.env.example` → `CLASSIFICATION_API_KEY` (JANGAN commit `.env` asli)
+- `App/service/schema/dexmin/dexmin.sql` → DDL kanonis 7 tabel (kontrak; belum dipakai runtime)
 - `landing/` → halaman publik statis (`index.html`, `aturan.html`, `styles.css`, `app.js`, `serve.mjs`)
 - `landing/data.json` → 9 contoh diagnosis + 8 aturan, digenerate dari golden suite backend
   (`node build-data.mjs`; `--check` memastikan tidak drift)

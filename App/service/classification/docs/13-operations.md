@@ -8,8 +8,8 @@ cd App/service/classification && ./run.sh
 # atau langsung:
 cd App/service/classification/backend-node && npm start
 
-# tampilan
-bun run dev   # 3030 teruskan /api/* → 127.0.0.1:3031
+# landing statis (proxy /api/* → 127.0.0.1:3031)
+cd App/service/classification/landing && node serve.mjs   # :3030
 ```
 
 Runtime opsional: `HOST` (default `127.0.0.1`), `PORT` (default `3031`).
@@ -17,7 +17,7 @@ Konfigurasi aktif: `backend-node/.env.example` hanya berisi `CLASSIFICATION_API_
 
 ## Penyimpanan (MySQL)
 
-Skema 7 tabel, relasi, seed gangguan, dan contoh query: `07-storage.md`. Sumber tunggal DDL: `Data/db-mysql/dexmin/dexmin.sql`. Schema dipertahankan sebagai kontrak arsitektur; implementasi ingestion Python (`app/ingest_db/`) **dihapus** pada refactor 2026-10-19. Ingestion Node.js dibangun pada tahap migrasi (`20-migrasi-nodejs.md`), termasuk pemakaian `CLASSIFICATION_DB_*`. Tidak ada perubahan pada database production.
+Skema 7 tabel, relasi, seed gangguan, dan contoh query: `07-storage.md`. Sumber tunggal DDL: `App/service/schema/dexmin/dexmin.sql`. Schema dipertahankan sebagai kontrak arsitektur; implementasi ingestion Python (`app/ingest_db/`) **dihapus** pada refactor 2026-10-19. Backend Node belum memakai koneksi MySQL; ingestion dibangun pada tahap migrasi (`20-migrasi-nodejs.md`), termasuk pemakaian `CLASSIFICATION_DB_*`. Tidak ada perubahan pada database production.
 
 Backend produksi jalan via systemd (`classify-pump-node.service`, Restart=always). Jangan start manual via nohup — kalah balapan port:
 

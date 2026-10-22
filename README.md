@@ -1,15 +1,17 @@
 # Classify Pump Failure
 
-Klasifikasi gangguan pompa (penggerak/VSD dan panel) dari data sensor file CSV: 9 hasil (`pompa_tersangkut_sampah`, `turbulensi`, `banyak_sampah`, `unbalance`, `undervoltage`, `overvoltage`, `dry_run`, `panel_overheat`, `normal`) dari satu mesin aturan yang sama, disajikan lewat landing statis dan API klasifikasi.
+Klasifikasi gangguan pompa (penggerak/VSD dan panel) dari data sensor: 9 hasil (`pompa_tersangkut_sampah`, `turbulensi`, `banyak_sampah`, `unbalance`, `undervoltage`, `overvoltage`, `dry_run`, `panel_overheat`, `normal`) dari satu mesin aturan yang sama, disajikan lewat landing statis dan API klasifikasi.
 
 ## Struktur
 
 ```
-App/service/classification/
-  backend-node/  # Node.js (TypeScript + Fastify) :3031 — klasifikasi single-shot BE (/classify)
-  landing/       # Halaman publik statis :3030 (diagnosis, aturan, status API)
-  docs/          # 01-overview … 20-migrasi-nodejs (arsitektur, kontrak, operasi, FMEA)
-Data/        # CSV mentah + metadata/normalized (contoh: aldo_pump_logs_2.csv)
+App/service/
+  classification/
+    backend-node/  # Node.js (TypeScript + Fastify) :3031 — klasifikasi single-shot BE (/classify)
+    landing/       # Halaman publik statis :3030 (diagnosis, aturan, status API)
+    docs/          # 01-overview … 20-migrasi-nodejs (arsitektur, kontrak, operasi, FMEA)
+  schema/
+    dexmin/dexmin.sql  # DDL kanonis 7 tabel (kontrak DB)
 Docs/        # Manual pompa (ATV610, ACS580/ACQ580, D32)
 PRODUCT.md   # Tujuan produk • DESIGN.md — sistem desain "Ruang Kontrol Tenang"
 ```
@@ -50,4 +52,4 @@ node --check serve.mjs && node --check app.js \
 
 ## Operasi
 
-Systemd user: `classify-pump-node` (:3031), `classify-pump-landing` (:3030), `classify-pump-tunnel` (Cloudflare). Detail: `docs/16-deploy-cloudflare.md`. Cek sehat: `GET /health` → `{status, rules_exists, rules_loaded, rules_error, setpoints_exists, setpoints_loaded, setpoints_error}`.
+Systemd user: `classify-pump-node` (:3031), `classify-pump-landing` (:3030), `classify-pump-tunnel` (Cloudflare). DDL kanonis: `App/service/schema/dexmin/dexmin.sql`. Detail: `docs/16-deploy-cloudflare.md`. Cek sehat: `GET /health` → `{status, rules_exists, rules_loaded, rules_error, setpoints_exists, setpoints_loaded, setpoints_error}`.

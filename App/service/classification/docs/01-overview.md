@@ -1,12 +1,12 @@
 # 01 — Gambaran Umum
 
-Layanan Klasifikasi Gangguan Pompa memantau kondisi pompa (penggerak/VSD dan panel) dari data sensor file CSV, lalu menentukan kondisi operasi: salah satu jenis gangguan, atau `normal` (sehat).
+Layanan Klasifikasi Gangguan Pompa memantau kondisi pompa (penggerak/VSD dan panel) dari data sensor (`readings` JSON), lalu menentukan kondisi operasi: salah satu jenis gangguan, atau `normal` (sehat).
 
 ## Tujuan
 
 - Mengubah data sensor mentah menjadi keputusan operasional yang bisa ditindaklanjuti.
-- Menjaga konsistensi penilaian file dokumen (unggah → siapkan → pindai).
-- Memisahkan tugas secara tegas: penerimaan data, pengurutan waktu, penilaian gangguan, dan tampilan hasil.
+- Menjaga konsistensi penilaian lewat API dan landing.
+- Memisahkan tugas secara tegas: penerimaan data, penilaian gangguan, dan penyajian hasil.
 
 ## Prinsip Utama
 
@@ -14,7 +14,7 @@ Layanan Klasifikasi Gangguan Pompa memantau kondisi pompa (penggerak/VSD dan pan
 - **Waktu kejadian mengikuti data.** Waktu yang dipakai adalah waktu yang tercatat pada data sensor itu sendiri, bukan waktu sistem menerimanya.
 - **Data kosong tidak diisi nol.** Sensor yang tidak mengirim dibiarkan kosong dan dilaporkan sebagai data hilang; tidak pernah diganti angka `0`.
 - **Pompa tersangkut sampah langsung diputuskan** begitu polanya terpenuhi (frekuensi ≤ 10 Hz dan minimal 3 dari 4 tanda lain) — tanpa menunggu bukti berulang.
-- **Satu jalur penilaian:** API langsung `POST /classify` — stateless, tanpa CSV, untuk tim BE (mesin sama). Lihat `18` dan `19`.
+- **Satu jalur penilaian:** API langsung `POST /classify` — stateless, tanpa pipeline file, untuk tim BE (mesin sama). Lihat `18` dan `19`.
   - Catatan (refactor 2026-10-19): jalur file/CSV (unggah → normalisasi → kelompok) **dihapus** dari backend ini; migrasi Node.js dibahas di `20`.
 
 ## Konteks Sistem

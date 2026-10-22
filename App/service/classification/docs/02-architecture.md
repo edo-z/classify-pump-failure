@@ -54,6 +54,17 @@ landing/
 > Endpoint lama `/documents`, `/normalization`, `/telemetry`, `/classification/*`
 > sudah dihapus.
 
+## Struktur Schema DB — kontrak arsitektur
+
+```
+App/service/schema/
+  dexmin/dexmin.sql       # DDL kanonis: 7 tabel, MySQL 8.x, utf8mb4_unicode_ci
+```
+
+`dexmin.sql` adalah satu-satunya sumber DDL. Backend Node belum membuka koneksi
+MySQL; schema dipertahankan sebagai kontrak untuk tahap ingestion berikutnya
+(lihat `07-storage.md` dan `20-migrasi-nodejs.md`).
+
 ## Modul & Tanggung Jawab
 
 | Modul | Peran | Batasan |

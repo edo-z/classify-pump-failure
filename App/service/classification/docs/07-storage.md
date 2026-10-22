@@ -1,6 +1,6 @@
 # 07 — Skema Penyimpanan (MySQL)
 
-> 5R Rawat — sumber tunggal DDL: `Data/db-mysql/dexmin/dexmin.sql`. Dokumen ini ringkasan rancangan; bila berbeda, file SQL yang berlaku.
+> 5R Rawat — sumber tunggal DDL: `App/service/schema/dexmin/dexmin.sql`. Dokumen ini ringkasan rancangan; bila berbeda, file SQL yang berlaku.
 
 Skema basis data `dexmin`: 7 tabel, MySQL 8.x, `utf8mb4_unicode_ci`. Ditujukan untuk database baru/kosong atau audit rancangan — `CREATE TABLE IF NOT EXISTS` **tidak** memigrasikan struktur tabel lama.
 
@@ -234,4 +234,4 @@ Tervalidasi pada database development (container `db-mysql`, MySQL 8.0.46): 7 ta
 - `13-operations.md` — konfigurasi koneksi (`CLASSIFICATION_DB_*`, untuk tahap migrasi).
 - `06-classification.md` — aturan klasifikasi yang memakai `failure_types.failure`.
 - `20-migrasi-nodejs.md` — rencana ingestion Node.js.
-- Sumber DDL: `Data/db-mysql/dexmin/dexmin.sql`.
+- Sumber DDL: `App/service/schema/dexmin/dexmin.sql`.

@@ -16,8 +16,9 @@
   dan **differential oracle** (`backend-node/test/differential/frozen.json`,
   400 kasus + respons Python) sebagai kontrak kesetaraan.
 - Kontrak integrasi aktif: `POST /classify`, `/profile-setpoints`, `GET /health`.
-- Schema MySQL 7 tabel (`07-storage.md`, `dexmin.sql`) **tetap** kontrak
-  arsitektur DEXMIN; yang dihapus hanyalah *implementasi* ingestion Python.
+- Schema MySQL 7 tabel (`07-storage.md`, `App/service/schema/dexmin/dexmin.sql`)
+  **tetap** kontrak arsitektur DEXMIN; yang dihapus hanyalah *implementasi*
+  ingestion Python. Backend Node belum membuka koneksi MySQL.
 
 ## Arsitektur Python (ARSIP — dihapus 2026-10-20)
 
