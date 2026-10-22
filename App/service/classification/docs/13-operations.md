@@ -3,7 +3,7 @@
 ## Menjalankan
 
 ```bash
-# backend (Node.js + Fastify) — :3031
+# backend (Node.js + Socket.IO) — :3031
 cd App/service/classification && ./run.sh
 # atau langsung:
 cd App/service/classification/backend-node && npm start
@@ -40,7 +40,7 @@ Status `degraded` bila file aturan rusak (schema tanpa `tiers`) atau file setpoi
 
 CORS backend: `allow_origins=["*"]` dengan `allow_credentials=False`, `allow_methods/headers=["*"]`.
 
-Batas body request 2MB (Fastify; lebih dari itu `413`).
+Batas body request 1MB (Socket.IO; lebih dari itu koneksi ditolak).
 
 ## Mengelola Acuan
 

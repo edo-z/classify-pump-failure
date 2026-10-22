@@ -6,7 +6,7 @@ CORS backend: `allow_origins=["*"]` dengan `allow_credentials=False`, `allow_met
 
 > Refactor 2026-10-19: hanya endpoint di bawah yang aktif. Endpoint berbasis
 > file/CSV dihapus (lihat bagian akhir).
-> Cutover 2026-10-20: backend Node.js (Fastify) menggantikan Python di `:3031`;
+> Cutover 2026-10-20: backend Node.js (Socket.IO) menggantikan Python di `:3031`;
 > tidak ada `GET /docs` (Swagger tidak disediakan). Detail: `20-migrasi-nodejs.md`.
 
 ## Kesehatan & Akar

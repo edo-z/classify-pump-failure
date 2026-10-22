@@ -2,7 +2,7 @@
 
 > Refactor 2026-10-19: endpoint aktif hanya `POST /classify`,
 > `/profile-setpoints`, dan `GET /health`. Endpoint file/CSV dihapus.
-> Cutover 2026-10-20: backend Node.js (Fastify) menggantikan Python di `:3031`,
+> Cutover 2026-10-20: backend Node.js (Socket.IO) menggantikan Python di `:3031`,
 > kontrak input/output identik. Detail: `20-migrasi-nodejs.md`.
 
 Kontrak stabil satu endpoint. Aturan 100% milik service ini; tim BE hanya mengirim data sensor dalam bentuk reading kanonis. Dexmin/SSE di luar skop dokumen ini.

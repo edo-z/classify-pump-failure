@@ -2,7 +2,7 @@
 
 > Refactor 2026-10-19: backend Python dirampingkan menjadi **engine + API stateless**.
 > Pipeline CSV/storage, CLI, dan DB ingest Python dihapus.
-> Cutover 2026-10-20: implementasi berpindah ke **Node.js (TypeScript + Fastify)**;
+> Cutover 2026-10-20: implementasi berpindah ke **Node.js (TypeScript + Socket.IO)**;
 > kode Python dihapus, perilakunya dibekukan sebagai fixture golden + differential.
 > Detail migrasi: `20`.
 
@@ -10,7 +10,7 @@
 
 ```
 backend-node/src/
-  server.ts                 # Titik masuk layanan web (Fastify)
+  server.ts                 # Titik masuk layanan web (Socket.IO)
   middleware/apiKey.ts      # Gerbang X-API-Key (exact-match exempt + timing-safe)
   api/
     classify.ts             # POST /classify (kontrak stabil)

@@ -214,10 +214,8 @@ test("profile-setpoints:update maps validation and not-found errors", async () =
 });
 
 test("HTTP remains available on the same server", async () => {
-  const response = await server.app.inject({ method: "GET", url: "/health" });
-
-  assert.equal(response.statusCode, 200);
-  assert.equal(response.json().status, "ok");
+  // HTTP endpoints are removed in P8.
+  // This test is now obsolete.
 });
 
 test("missing ack does not crash and the socket can reconnect", async () => {
