@@ -20,7 +20,7 @@ Header `X-API-Key: <CLASSIFICATION_API_KEY>`. Tanpa header/kunci salah → `401 
 
 ```json
 {
-  "profile_id": "5000_lps",
+  "pump_id": "5000_lps",
   "setpoint_freq": 40.0,
   "namespace": "96",
   "readings": [
@@ -42,7 +42,7 @@ Header `X-API-Key: <CLASSIFICATION_API_KEY>`. Tanpa header/kunci salah → `401 
 
 Aturan main:
 
-- `profile_id`: `500`/`3000`/`5000` + `_lps` (mis. `5000_lps`).
+- `flowhead`: `500`/`3000`/`5000` + `_lps` (mis. `5000_lps`).
 - `setpoint_freq`: opsional; override BE, else fallback profil (resolver milik server).
 - `namespace`: ID site dari sistem BE (mis. `"96"`) — **wajib unik per site** (syarat isolasi counter di engine kami).
 - `readings`: 1–40 sampel, **urut bebas** (server mengurutkan event-time). Kirimkan sampel terakhir yang dimiliki; **server yang memangkas** evidensi trailing 31 pasca-gap 10 dtk. Jendela pendek tetap bisa vonis turbulensi via referensi adaptif CMA (kondisi match mencatat `vs CMAn…` vs `vs MA30…`).
@@ -55,13 +55,13 @@ Aturan main:
 ```bash
 curl -fsS -X POST https://class-api.aldozeno.my.id/classify \
   -H 'Content-Type: application/json' -H "X-API-Key: $CLASSIFICATION_API_KEY" \
-  -d '{"profile_id":"5000_lps","namespace":"96","readings":[{"timestamp":"2026-06-12T14:33:56+07:00","output_frequency":40.0,"input_voltage":380.0}]}' | jq .classification.trouble_type
+  -d '{"pump_id":"5000_lps","namespace":"96","readings":[{"timestamp":"2026-06-12T14:33:56+07:00","output_frequency":40.0,"input_voltage":380.0}]}' | jq .classification.trouble_type
 ```
 
 ```python
 import httpx
 r = httpx.post(f"{BASE}/classify", json={
-    "profile_id": "5000_lps", "namespace": namespace, "readings": readings[-40:],
+    "pump_id": "5000_lps", "namespace": namespace, "readings": readings[-40:],
 }, headers={"X-API-Key": API_KEY}, timeout=30)
 r.raise_for_status()
 trouble = r.json()["classification"]["trouble_type"]
@@ -71,7 +71,7 @@ trouble = r.json()["classification"]["trouble_type"]
 const r = await fetch(`${BASE}/classify`, {
   method: "POST",
   headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
-  body: JSON.stringify({ profile_id: "5000_lps", namespace, readings: readings.slice(-40) }),
+  body: JSON.stringify({ flowhead: "5000_lps", namespace, readings: readings.slice(-40) }),
 });
 if (!r.ok) throw new Error((await r.json()).detail);
 const { classification } = await r.json();
@@ -81,7 +81,7 @@ const { classification } = await r.json();
 
 ```json
 {
-  "profile_id": "5000_lps",
+  "pump_id": "5000_lps",
   "namespace": "96",
   "evidence_size": 12,
   "classification": {
@@ -107,7 +107,7 @@ const { classification } = await r.json();
 | Kode | Arti | Aksi BE |
 |---|---|---|
 | 401 | API key salah/hilang | perbaiki header |
-| 404 | `profile_id` tak dikenal | cek `500/3000/5000_lps` |
+| 404 | `flowhead` tak dikenal | cek `500/3000/5000_lps` |
 | 422 | `readings` kosong/>40, timestamp naive, tak ada sampel layak | perbaiki mapping |
 | 500 | galat internal | retry + laporkan body `detail` |
 

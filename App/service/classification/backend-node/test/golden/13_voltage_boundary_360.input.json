@@ -1,6 +1,6 @@
 {
-  "profile_id": "5000_lps",
-  "namespace": "golden-v360",
+  "flowhead": "5000_lps",
+  "pump_id": "golden-v360",
   "setpoint_freq": null,
   "readings": [
     {

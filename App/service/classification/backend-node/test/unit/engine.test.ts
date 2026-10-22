@@ -126,8 +126,8 @@ test("turbulensi insufficient with zero history", () => {
 // ------------------------------------------------------------------- tiers
 const TIERS = ["500_lps", "3000_lps"] as const;
 
-function tierRefs(profile_id: string) {
-  const capacity = getProfileCapacity(profile_id);
+function tierRefs(flowhead: string) {
+  const capacity = getProfileCapacity(flowhead);
   const rules = JSON.parse(readFileSync(RULES_FILE, "utf-8")) as {
     tiers: Record<string, { rules: Record<string, { conditions: Record<string, unknown>[] }> }>;
   };
@@ -138,7 +138,7 @@ function tierRefs(profile_id: string) {
   const turb = tier_rules.TURBULENSI!.conditions;
   const t_kw = Number(turb.find((c) => String(c.note ?? "").startsWith("T_KW"))!.value);
   const [window, threshold] = getTAParams({ conditions: turb });
-  const sp = resolveEffectiveSetpoint(profile_id);
+  const sp = resolveEffectiveSetpoint(flowhead);
   return {
     capacity,
     sp_freq: Number(sp.frequency),
@@ -150,18 +150,18 @@ function tierRefs(profile_id: string) {
   };
 }
 
-for (const profile_id of TIERS) {
-  test(`tier ${profile_id}: voltage boundaries`, () => {
-    const refs = tierRefs(profile_id);
+for (const flowhead of TIERS) {
+  test(`tier ${flowhead}: voltage boundaries`, () => {
+    const refs = tierRefs(flowhead);
     const eng = newEngine();
     const pc = { pump_id: refs.capacity, capacity_lps: refs.capacity };
-    const sp = resolveEffectiveSetpoint(profile_id);
+    const sp = resolveEffectiveSetpoint(flowhead);
     const run = (volts: number) =>
       eng.classify(
         [reading(BASE_TS_MS, { input_voltage: volts, motor_current: 100.0, output_frequency: refs.sp_freq, output_power: 300.0, motor_torque: 80.0 })],
         pc,
         sp,
-        `test:tier-v:${profile_id}`,
+        `test:tier-v:${flowhead}`,
       );
     assert.equal(run(355).trouble_type, TroubleType.UNDERVOLTAGE);
     assert.notEqual(run(360).trouble_type, TroubleType.UNDERVOLTAGE);
@@ -169,27 +169,27 @@ for (const profile_id of TIERS) {
     assert.notEqual(run(410).trouble_type, TroubleType.OVERVOLTAGE);
   });
 
-  test(`tier ${profile_id}: dry run match + freq gate`, () => {
-    const refs = tierRefs(profile_id);
+  test(`tier ${flowhead}: dry run match + freq gate`, () => {
+    const refs = tierRefs(flowhead);
     const eng = newEngine();
     const pc = { pump_id: refs.capacity, capacity_lps: refs.capacity };
-    const sp = resolveEffectiveSetpoint(profile_id);
+    const sp = resolveEffectiveSetpoint(flowhead);
     const run = (freq: number) =>
       eng.classify(
         [reading(BASE_TS_MS, { output_frequency: freq, output_power: refs.dr_kw * 0.9, motor_current: refs.dr_amp * 0.9, motor_torque: 40.0 })],
         pc,
         sp,
-        `test:tier-dry:${profile_id}`,
+        `test:tier-dry:${flowhead}`,
       );
     assert.equal(run(refs.sp_freq).trouble_type, TroubleType.DRY_RUN);
     assert.notEqual(run(Math.round((refs.sp_freq + 0.01) * 100) / 100).trouble_type, TroubleType.DRY_RUN);
   });
 
-  test(`tier ${profile_id}: turbulensi match`, () => {
-    const refs = tierRefs(profile_id);
+  test(`tier ${flowhead}: turbulensi match`, () => {
+    const refs = tierRefs(flowhead);
     const eng = newEngine();
     const pc = { pump_id: refs.capacity, capacity_lps: refs.capacity };
-    const sp = resolveEffectiveSetpoint(profile_id);
+    const sp = resolveEffectiveSetpoint(flowhead);
     const readings = steady(BASE_TS_MS, refs.t_window, 500.0, refs.sp_freq - 5.0, refs.t_kw + 5.0, 95.0);
     readings.push(
       reading(BASE_TS_MS + refs.t_window * 1000, {
@@ -199,7 +199,7 @@ for (const profile_id of TIERS) {
         motor_torque: 95.0,
       }),
     );
-    assert.equal(eng.classify(readings, pc, sp, `test:tier-turb:${profile_id}`).trouble_type, TroubleType.TURBULENSI);
+    assert.equal(eng.classify(readings, pc, sp, `test:tier-turb:${flowhead}`).trouble_type, TroubleType.TURBULENSI);
   });
 }
 

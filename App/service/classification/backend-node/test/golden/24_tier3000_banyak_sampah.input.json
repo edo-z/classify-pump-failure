@@ -1,6 +1,6 @@
 {
-  "profile_id": "3000_lps",
-  "namespace": "golden-tier3000",
+  "flowhead": "3000_lps",
+  "pump_id": "golden-tier3000",
   "setpoint_freq": null,
   "readings": [
     {

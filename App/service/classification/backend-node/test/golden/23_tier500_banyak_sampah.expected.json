@@ -1,9 +1,8 @@
 {
-  "profile_id": "500_lps",
-  "namespace": "golden-tier500",
+  "flowhead": "500_lps",
+  "pump_id": "golden-tier500",
   "evidence_size": 1,
   "classification": {
-    "pump_id": 500,
     "timestamp": "2026-10-19T10:00:00+07:00",
     "trouble_type": "banyak_sampah",
     "matched_rules": [
@@ -19,15 +18,15 @@
       }
     ],
     "sensor_snapshot": {
-      "output_frequency": 45.0,
-      "output_power": 100.0,
-      "motor_current": 200.0,
-      "motor_torque": 95.0,
-      "motor_speed": 900.0,
-      "ambient_temperature": 30.0,
-      "control_board_temperature": 40.0,
-      "inverter_temperature": 45.0,
-      "input_voltage": 380.0
+      "output_frequency": 45,
+      "output_power": 100,
+      "motor_current": 200,
+      "motor_torque": 95,
+      "motor_speed": 900,
+      "ambient_temperature": 30,
+      "control_board_temperature": 40,
+      "inverter_temperature": 45,
+      "input_voltage": 380
     },
     "readings_count": 1,
     "limitations": [
@@ -112,6 +111,7 @@
         "matched_conditions": [],
         "total_conditions": 1
       }
-    ]
+    ],
+    "pump_id": 500
   }
 }

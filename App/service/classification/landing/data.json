@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "profile_id": "5000_lps",
+  "flowhead": "5000_lps",
   "profile_label": "5000 lps",
   "default_case": "pompa_tersangkut_sampah",
   "rule_version": "1.1",
@@ -106,8 +106,8 @@
       "short": "Normal",
       "metric": "39 Hz · 200 A",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-normal",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-normal",
         "setpoint_freq": null,
         "readings": [
           {
@@ -197,8 +197,8 @@
       "short": "Tersangkut sampah",
       "metric": "8 Hz · 900 A",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-pts",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-pts",
         "setpoint_freq": null,
         "readings": [
           {
@@ -310,8 +310,8 @@
       "short": "Banyak sampah",
       "metric": "39 Hz · 900 A",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-bs",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-bs",
         "setpoint_freq": null,
         "readings": [
           {
@@ -412,8 +412,8 @@
       "short": "Dry run",
       "metric": "40 Hz · 100 kW",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-dry",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-dry",
         "setpoint_freq": null,
         "readings": [
           {
@@ -514,8 +514,8 @@
       "short": "Unbalance",
       "metric": "Fasa W 140 A",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-unbalance",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-unbalance",
         "setpoint_freq": null,
         "readings": [
           {
@@ -613,8 +613,8 @@
       "short": "Undervoltage",
       "metric": "340 V",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-undervoltage",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-undervoltage",
         "setpoint_freq": null,
         "readings": [
           {
@@ -712,8 +712,8 @@
       "short": "Overvoltage",
       "metric": "415 V",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-overvoltage",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-overvoltage",
         "setpoint_freq": null,
         "readings": [
           {
@@ -811,8 +811,8 @@
       "short": "Panel overheat",
       "metric": "65 °C",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-panel",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-panel",
         "setpoint_freq": null,
         "readings": [
           {
@@ -910,8 +910,8 @@
       "short": "Turbulensi",
       "metric": "31 pembacaan",
       "input": {
-        "profile_id": "5000_lps",
-        "namespace": "golden-turb-ma30",
+        "flowhead": "5000_lps",
+        "pump_id": "golden-turb-ma30",
         "setpoint_freq": null,
         "readings": [
           {

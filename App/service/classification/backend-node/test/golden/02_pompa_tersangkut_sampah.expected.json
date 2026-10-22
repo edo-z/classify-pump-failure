@@ -1,9 +1,8 @@
 {
-  "profile_id": "5000_lps",
-  "namespace": "golden-pts",
+  "flowhead": "5000_lps",
+  "pump_id": "golden-pts",
   "evidence_size": 1,
   "classification": {
-    "pump_id": 5000,
     "timestamp": "2026-10-19T10:00:00+07:00",
     "trouble_type": "pompa_tersangkut_sampah",
     "matched_rules": [
@@ -30,15 +29,15 @@
       }
     ],
     "sensor_snapshot": {
-      "output_frequency": 8.0,
-      "output_power": 450.0,
-      "motor_current": 900.0,
-      "motor_torque": 115.0,
-      "motor_speed": 200.0,
-      "ambient_temperature": 30.0,
-      "control_board_temperature": 40.0,
-      "inverter_temperature": 45.0,
-      "input_voltage": 380.0
+      "output_frequency": 8,
+      "output_power": 450,
+      "motor_current": 900,
+      "motor_torque": 115,
+      "motor_speed": 200,
+      "ambient_temperature": 30,
+      "control_board_temperature": 40,
+      "inverter_temperature": 45,
+      "input_voltage": 380
     },
     "readings_count": 1,
     "limitations": [
@@ -125,6 +124,7 @@
         "matched_conditions": [],
         "total_conditions": 1
       }
-    ]
+    ],
+    "pump_id": 5000
   }
 }

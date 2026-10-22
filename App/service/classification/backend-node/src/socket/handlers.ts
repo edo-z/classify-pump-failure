@@ -60,7 +60,7 @@ function ackFrom(payload: unknown, ack: unknown): unknown {
   return undefined;
 }
 
-function profileIdFrom(payload: unknown): string | null {
+function flowheadIdFrom(payload: unknown): string | null {
   if (typeof payload === "function") return null;
   if (payload === null || payload === undefined) return null;
   if (typeof payload !== "object" || Array.isArray(payload)) {
@@ -85,6 +85,7 @@ export function registerSocketHandlers(
     console.log("[classify] socket connected:", socket.id);
 
     socket.on("classify", (payload: unknown, ack: unknown) => {
+      console.log("[classify] incoming request payload:", JSON.stringify(payload, null, 2));
       respond(ack, () => classify(payload));
     });
 
@@ -94,8 +95,8 @@ export function registerSocketHandlers(
 
     socket.on("profile-setpoints:get", (payload: unknown, ack: unknown) => {
       respond(ackFrom(payload, ack), () => {
-        const profileId = profileIdFrom(payload);
-        return profileId === null ? listSetpoints() : readSetpoint(profileId);
+        const flowheadId = flowheadIdFrom(payload);
+        return flowheadId === null ? listSetpoints() : readSetpoint(flowheadId);
       });
     });
 

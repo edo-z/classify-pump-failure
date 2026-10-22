@@ -1,6 +1,6 @@
 {
-  "profile_id": "5000_lps",
-  "namespace": "golden-unbalance-null",
+  "flowhead": "5000_lps",
+  "pump_id": "golden-unbalance-null",
   "setpoint_freq": null,
   "readings": [
     {

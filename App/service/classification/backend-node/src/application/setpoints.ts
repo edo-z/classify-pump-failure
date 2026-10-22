@@ -52,18 +52,18 @@ export function listProfileSetpoints(
 }
 
 export function readProfileSetpoint(
-  profile_id: string,
+  flowheadId: string,
   path: URL | string = PROFILE_SETPOINTS_FILE,
 ): ProfileSetpoint {
-  return getProfileSetpoint(profile_id, path);
+  return getProfileSetpoint(flowheadId, path);
 }
 
 export function updateProfileSetpoint(
-  profile_id: string,
+  flowheadId: string,
   rawBody: unknown,
   path: URL | string = PROFILE_SETPOINTS_FILE,
 ): ProfileSetpoint {
-  const current = getProfileSetpoint(profile_id, path);
+  const current = getProfileSetpoint(flowheadId, path);
   const setpoint = parseUpdate(rawBody, current);
-  return saveProfileSetpoint(profile_id, setpoint, path);
+  return saveProfileSetpoint(flowheadId, setpoint, path);
 }

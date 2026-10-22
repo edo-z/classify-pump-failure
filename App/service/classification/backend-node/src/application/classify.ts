@@ -99,7 +99,7 @@ function parseReading(raw: unknown): SensorReading {
 }
 
 export interface ClassifyResponseBody {
-  profile_id: string;
+  flowhead: string;
   pump_id: string;
   evidence_size: number;
   classification: Record<string, unknown>;
@@ -191,7 +191,7 @@ export function classifyRequest(rawBody: unknown): ClassifyResponseBody {
   );
 
   return {
-    profile_id,
+    flowhead: profile_id,
     pump_id: pump_id_val,
     evidence_size: evidence.length,
     classification: serializeClassification(classification),

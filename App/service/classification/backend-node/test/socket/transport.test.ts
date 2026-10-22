@@ -107,8 +107,8 @@ test("classify event returns the application response", async () => {
 
   assert.equal(response.ok, true);
   if (response.ok) {
-    assert.equal(response.data.profile_id, "5000_lps");
-    assert.equal(response.data.namespace, "golden-normal");
+    assert.equal(response.data.flowhead, "5000_lps");
+    assert.equal(response.data.pump_id, "golden-normal");
     assert.ok(
       typeof response.data.classification.trouble_type === "string",
     );
@@ -116,11 +116,11 @@ test("classify event returns the application response", async () => {
 });
 
 test("classify event maps validation errors", async () => {
-  const response = await request("classify", {
-    profile_id: "5000_lps",
-    namespace: "socket-test",
-    readings: [],
-  });
+    const response = await request("classify", {
+      flowhead: "5000_lps",
+      pump_id: "socket-test",
+      readings: [],
+    });
 
   assert.equal(response.ok, false);
   if (!response.ok) {
@@ -131,7 +131,7 @@ test("classify event maps validation errors", async () => {
 
 test("classify event maps unknown profiles to NOT_FOUND", async () => {
   const input = JSON.parse(readFileSync(GOLDEN, "utf-8"));
-  input.profile_id = "unknown_lps";
+  input.flowhead = "unknown_lps";
   const response = await request("classify", input);
 
   assert.equal(response.ok, false);
@@ -162,7 +162,7 @@ test("profile-setpoints:get supports list and single profile", async () => {
 
   const single = await request<{ frequency_hz: number }>(
     "profile-setpoints:get",
-    { profile_id: "5000_lps" },
+    { flowhead: "5000_lps" },
   );
   assert.equal(single.ok, true);
   if (single.ok) assert.equal(single.data.frequency_hz, 40);
@@ -180,7 +180,7 @@ test("profile-setpoints:get supports callback-only list requests", async () => {
 test("profile-setpoints:update uses merge semantics", async () => {
   const updated = await request<{ frequency_hz: number; rpm: number }>(
     "profile-setpoints:update",
-    { profile_id: "5000_lps", frequency_hz: 42 },
+    { flowhead: "5000_lps", frequency_hz: 42 },
   );
 
   assert.equal(updated.ok, true);
@@ -191,7 +191,7 @@ test("profile-setpoints:update uses merge semantics", async () => {
 
   const read = await request<{ frequency_hz: number }>(
     "profile-setpoints:get",
-    { profile_id: "5000_lps" },
+    { flowhead: "5000_lps" },
   );
   assert.equal(read.ok, true);
   if (read.ok) assert.equal(read.data.frequency_hz, 42);
@@ -199,14 +199,14 @@ test("profile-setpoints:update uses merge semantics", async () => {
 
 test("profile-setpoints:update maps validation and not-found errors", async () => {
   const invalid = await request("profile-setpoints:update", {
-    profile_id: "5000_lps",
+    flowhead: "5000_lps",
     frequency_hz: -1,
   });
   assert.equal(invalid.ok, false);
   if (!invalid.ok) assert.equal(invalid.error.code, "VALIDATION");
 
   const unknown = await request("profile-setpoints:update", {
-    profile_id: "unknown_lps",
+    flowhead: "unknown_lps",
     frequency_hz: 42,
   });
   assert.equal(unknown.ok, false);

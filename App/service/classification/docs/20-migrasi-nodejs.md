@@ -92,7 +92,7 @@ keputusan: aktivasi `CLASSIFICATION_API_KEY` (butuh injeksi key di FE/tunnel).
 
 ## Kontrak JSON Input
 
-Identik dengan `/classify` (lihat `18-integrasi.md`): `profile_id`,
+Identik dengan `/classify` (lihat `18-integrasi.md`): `flowhead`,
 `setpoint_freq` (opsional), `namespace`, `readings` (1–40, urut bebas,
 `timestamp` wajib ber-zona waktu).
 
@@ -100,7 +100,7 @@ Identik dengan `/classify` (lihat `18-integrasi.md`): `profile_id`,
 
 ```json
 {
-  "profile_id": "3000_lps",
+  "pump_id": "3000_lps",
   "namespace": "12",
   "classification": {
     "trouble_type": "dry_run",
@@ -141,7 +141,7 @@ eksplisit/teruji — bukan dengan mengubah engine.
 
 | Field | Python & Node fase 1 | Usulan fase lanjutan |
 |---|---|---|
-| envelope | `{profile_id, namespace, evidence_size, classification}` | `{profile_id, namespace, classification}` |
+| envelope | `{flowhead, namespace, evidence_size, classification}` | `{flowhead, namespace, classification}` |
 | `classification.pump_id` | ada (= `capacity_lps`, mis. 5000) | **tidak ada** |
 | `classification.limitations` | ada | **tidak ada** |
 | `classification.evaluation_status` | ada | **tidak ada** |
@@ -208,7 +208,7 @@ Migrasi dinyatakan setara bila:
 
 - Untuk **seluruh 25 golden fixture**, respons Node **sama persis** dengan Python
   (deep equality atas JSON penuh), mencakup:
-  - `profile_id`, `namespace`, `evidence_size`;
+  - `flowhead`, `namespace`, `evidence_size`;
   - `classification.pump_id`, `timestamp` (offset zona waktu dipertahankan),
     `trouble_type`, `readings_count`, `evaluation_status`;
   - `matched_rules` beserta urutan dan string `matched_conditions`;

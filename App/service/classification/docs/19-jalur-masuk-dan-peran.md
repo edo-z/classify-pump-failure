@@ -23,7 +23,7 @@ flowchart LR
     ENG --> NOTIF[Notifikasi]
 ```
 
-| Jalur | Butuh CSV? | Butuh `profile_id`? | Keterangan |
+| Jalur | Butuh CSV? | Butuh `flowhead`? | Keterangan |
 |---|---|---|---|
 | `POST /classify` | Tidak | Ya + `namespace` wajib (ID site) | Stateless, tanpa simpan file. Untuk tim BE/MQTT. Max 40 readings. |
 
@@ -51,7 +51,7 @@ Semua pola langsung diputuskan 1x (`count_trigger: 1`), tanpa menunggu bukti ber
 - Semua yang terdeteksi sama pentingnya, seperti beberapa bel bunyi bersamaan.
 - `trouble_type` hanya **salah satu bunyi yang aktif** — yang dicek duluan secara teknis (tier → panel → unbalance → voltage). **Bukan juara, bukan prioritas bahaya.**
 - Hasil **tidak disimpan** di DB, tidak ada publish MQTT, bunyi suara, atau kirim otomatis ke Dexmin/LLM. Hanya jawaban JSON di memori. Refresh = pindai ulang. Chat dan klasifikasi tetap pisah.
-- Chat `/chat` pakai `language` (`lapangan|en`), bukan `profile_id` (klasifikasi tetap `profile_id`).
+- Chat `/chat` pakai `language` (`lapangan|en`), bukan `flowhead` (klasifikasi tetap `flowhead`).
 - Frontend `/documents`: buang `normal`, pakai `trouble_type` untuk kartu angka, area warna di grafik, tabel + tombol Zoom, dan toast "Selesai: X dari Y titik". `matched_rules` + `snapshot` + `limitations` dikirim backend tapi belum ditampilkan (blok "Indikasi Tambahan" saat ini mati). **Catatan refactor 2026-10-19:** endpoint yang dipakai halaman ini (`/documents`, `/telemetry`, `/classification/*`) sudah dihapus; lihat `11` dan `20`.
 - Tim BE: baca `classification.trouble_type` untuk notif sendiri. Jangan hardcode `360/410/60` di BE — ambang milik server.
 
@@ -60,7 +60,7 @@ Semua pola langsung diputuskan 1x (`count_trigger: 1`), tanpa menunggu bukti ber
 Input (`/classify`):
 
 ```json
-{"profile_id": "5000_lps", "namespace": "96", "readings": [{"timestamp": "2026-06-12T14:33:56+07:00", "output_frequency": 40.0, "input_voltage": 355.0}]}
+{"pump_id": "5000_lps", "namespace": "96", "readings": [{"timestamp": "2026-06-12T14:33:56+07:00", "output_frequency": 40.0, "input_voltage": 355.0}]}
 ```
 
 Output: `trouble_type: undervoltage` karena `355 < 360`. Di frontend: kartu `UNDERVOLTAGE`, area warna di grafik tegangan, baris tabel + Zoom, toast selesai.

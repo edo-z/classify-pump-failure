@@ -7,7 +7,7 @@
 ```json
 {
   "site_id": "96",
-  "profile_id": "5000_lps",
+  "pump_id": "5000_lps",
   "status": "READY",
   "message_count": 42,
   "last_update": "2026-09-16T15:00:00+07:00",

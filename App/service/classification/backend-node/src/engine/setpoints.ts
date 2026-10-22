@@ -49,7 +49,7 @@ function toProfileSetpoint(raw: Record<string, unknown>): ProfileSetpoint {
 export function loadProfileSetpoints(
   path: URL | string = PROFILE_SETPOINTS_FILE,
 ): Record<string, ProfileSetpoint> {
-  const profile_ids = loadProfileIds();
+  const flowhead_ids = loadProfileIds();
   let raw: Record<string, Record<string, unknown>> = {};
   if (existsSync(path)) {
     raw = JSON.parse(readFileSync(path, "utf-8")) as Record<
@@ -58,31 +58,31 @@ export function loadProfileSetpoints(
     >;
   }
   const out: Record<string, ProfileSetpoint> = {};
-  for (const profile_id of [...profile_ids].sort()) {
-    out[profile_id] = toProfileSetpoint(raw[profile_id] ?? {});
+  for (const flowhead_id of [...flowhead_ids].sort()) {
+    out[flowhead_id] = toProfileSetpoint(raw[flowhead_id] ?? {});
   }
   return out;
 }
 
 export function getProfileSetpoint(
-  profile_id: string,
+  flowhead_id: string,
   path: URL | string = PROFILE_SETPOINTS_FILE,
 ): ProfileSetpoint {
-  const profile_ids = loadProfileIds();
-  if (!profile_ids.has(profile_id)) {
-    throw new ProfileNotFoundError(profile_id);
+  const flowhead_ids = loadProfileIds();
+  if (!flowhead_ids.has(flowhead_id)) {
+    throw new ProfileNotFoundError(flowhead_id);
   }
-  return loadProfileSetpoints(path)[profile_id] as ProfileSetpoint;
+  return loadProfileSetpoints(path)[flowhead_id] as ProfileSetpoint;
 }
 
 export function saveProfileSetpoint(
-  profile_id: string,
+  flowhead_id: string,
   setpoint: ProfileSetpoint,
   path: URL | string = PROFILE_SETPOINTS_FILE,
 ): ProfileSetpoint {
-  const profile_ids = loadProfileIds();
-  if (!profile_ids.has(profile_id)) {
-    throw new ProfileNotFoundError(profile_id);
+  const flowhead_ids = loadProfileIds();
+  if (!flowhead_ids.has(flowhead_id)) {
+    throw new ProfileNotFoundError(flowhead_id);
   }
   for (const [field, value] of Object.entries(setpoint)) {
     if (value !== null && !Number.isFinite(value)) {
@@ -90,7 +90,7 @@ export function saveProfileSetpoint(
     }
   }
   const current = loadProfileSetpoints(path);
-  current[profile_id] = setpoint;
+  current[flowhead_id] = setpoint;
   const serializable: Record<string, ProfileSetpoint> = {};
   for (const key of Object.keys(current).sort()) {
     serializable[key] = current[key] as ProfileSetpoint;
@@ -103,10 +103,10 @@ export function saveProfileSetpoint(
 }
 
 export function resolveEffectiveSetpoint(
-  profile_id: string,
+  flowhead_id: string,
   override_freq: unknown = null,
 ): OperatingSetpoint {
-  const profile_sp = getProfileSetpoint(profile_id);
+  const profile_sp = getProfileSetpoint(flowhead_id);
   const freq = resolveLayeredValue(override_freq, profile_sp.frequency_hz);
   return { frequency: freq, rpm: profile_sp.rpm, torque: profile_sp.torque };
 }

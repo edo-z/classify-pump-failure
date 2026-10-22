@@ -1,9 +1,8 @@
 {
-  "profile_id": "5000_lps",
-  "namespace": "golden-missing",
+  "flowhead": "5000_lps",
+  "pump_id": "golden-missing",
   "evidence_size": 1,
   "classification": {
-    "pump_id": 5000,
     "timestamp": "2026-10-19T10:00:00+07:00",
     "trouble_type": "normal",
     "matched_rules": [],
@@ -78,6 +77,7 @@
         "matched_conditions": [],
         "total_conditions": 1
       }
-    ]
+    ],
+    "pump_id": 5000
   }
 }

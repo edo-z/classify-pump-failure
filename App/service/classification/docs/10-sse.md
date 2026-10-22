@@ -9,7 +9,7 @@ Satu-satunya SSE tersisa adalah chat asisten Dexmin (model eksternal `:4100`, lo
 
 Browser membuka `EventSource` ke `/api/llm/chat/{session}/stream?message=...&history=...&language=lapangan` (same-origin `:3030`, diteruskan ke `:4100`); riwayat 10 turn `{role, text}` dikirim ulang tiap turn (LLM stateless).
 
-Chat pakai `language` (`lapangan|en`), bukan `profile_id` (klasifikasi tetap `profile_id`).
+Chat pakai `language` (`lapangan|en`), bukan `flowhead` (klasifikasi tetap `flowhead`).
 
 ```
 event: delta

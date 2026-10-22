@@ -319,12 +319,48 @@ function renderRules(item) {
   }
 }
 
+function transformToClassifyPayload(raw) {
+  const data = raw.data || raw;
+  const ts = data.received_at
+    ? data.received_at.replace(" ", "T") + "+07:00"
+    : new Date().toISOString();
+
+  const parseNum = (val) => (val === null || val === undefined ? null : parseFloat(val));
+
+  // Suffix _lps ditambahkan otomatis untuk kompatibilitas dengan server
+  const flowheadVal = data.flowhead;
+  const profile_id = flowheadVal !== undefined && flowheadVal !== null 
+    ? `${flowheadVal}_lps` 
+    : null;
+
+  return {
+    flowhead: profile_id,
+    pump_id: raw.pump_id || data.pump_id,
+    setpoint_freq: parseNum(data.set_point),
+    readings: [
+      {
+        timestamp: ts,
+        motor_speed: parseNum(data.motor_speed),
+        output_frequency: parseNum(data.output_frequency),
+        motor_current: parseNum(data.motor_current),
+        motor_torque: parseNum(data.motor_torque),
+        output_power: parseNum(data.output_power),
+        hours_run: parseNum(data.hours_run),
+        output_voltage: parseNum(data.output_voltage),
+        ambient_temperature: parseNum(data.ambient_temperature),
+        control_board_temperature: parseNum(data.control_board_temperature),
+        inverter_temperature: parseNum(data.inverter_temperature),
+        input_voltage: parseNum(data.input_voltage),
+        arus_rms_u: parseNum(data.arus_rms_u),
+        arus_rms_v: parseNum(data.arus_rms_v),
+        arus_rms_w: parseNum(data.arus_rms_w),
+      },
+    ],
+  };
+}
+
 function renderCurl(item) {
-  const payload = JSON.stringify({
-    flowhead: 500,
-    pump_id: "34",
-    readings: item.input.readings || []
-  }, null, 2);
+  const payload = JSON.stringify(transformToClassifyPayload(item.input), null, 2);
   state.curl = `socket.emit("classify", ${payload}, (response) => {
   if (response.ok) console.log(response.data);
   else console.error(response.error);

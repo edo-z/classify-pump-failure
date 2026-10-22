@@ -1,22 +1,21 @@
 {
-  "profile_id": "5000_lps",
-  "namespace": "golden-dry-f4001",
+  "flowhead": "5000_lps",
+  "pump_id": "golden-dry-f4001",
   "evidence_size": 1,
   "classification": {
-    "pump_id": 5000,
     "timestamp": "2026-10-19T10:00:00+07:00",
     "trouble_type": "normal",
     "matched_rules": [],
     "sensor_snapshot": {
       "output_frequency": 40.01,
-      "output_power": 100.0,
-      "motor_current": 300.0,
-      "motor_torque": 40.0,
-      "motor_speed": 990.0,
-      "ambient_temperature": 30.0,
-      "control_board_temperature": 40.0,
-      "inverter_temperature": 45.0,
-      "input_voltage": 380.0
+      "output_power": 100,
+      "motor_current": 300,
+      "motor_torque": 40,
+      "motor_speed": 990,
+      "ambient_temperature": 30,
+      "control_board_temperature": 40,
+      "inverter_temperature": 45,
+      "input_voltage": 380
     },
     "readings_count": 1,
     "limitations": [
@@ -94,6 +93,7 @@
         "matched_conditions": [],
         "total_conditions": 1
       }
-    ]
+    ],
+    "pump_id": 5000
   }
 }

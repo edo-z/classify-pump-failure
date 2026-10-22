@@ -1,9 +1,8 @@
 {
-  "profile_id": "5000_lps",
-  "namespace": "golden-turb-cma10",
+  "flowhead": "5000_lps",
+  "pump_id": "golden-turb-cma10",
   "evidence_size": 11,
   "classification": {
-    "pump_id": 5000,
     "timestamp": "2026-10-19T10:00:10+07:00",
     "trouble_type": "turbulensi",
     "matched_rules": [
@@ -12,22 +11,22 @@
         "matched_conditions": [
           "freq=39.0 < setpoint 40.0",
           "power=450.0 >= 400",
-          "current=615.0 vs CMA10550.0 \u0394+65.0 |\u0394|65.0>=10",
+          "current=615.0 vs CMA10550.0 Δ+65.0 |Δ|65.0>=10",
           "torque=95.0 >= 90%"
         ],
         "total_conditions": 4
       }
     ],
     "sensor_snapshot": {
-      "output_frequency": 39.0,
-      "output_power": 450.0,
-      "motor_current": 615.0,
-      "motor_torque": 95.0,
-      "motor_speed": 990.0,
-      "ambient_temperature": 30.0,
-      "control_board_temperature": 40.0,
-      "inverter_temperature": 45.0,
-      "input_voltage": 380.0
+      "output_frequency": 39,
+      "output_power": 450,
+      "motor_current": 615,
+      "motor_torque": 95,
+      "motor_speed": 990,
+      "ambient_temperature": 30,
+      "control_board_temperature": 40,
+      "inverter_temperature": 45,
+      "input_voltage": 380
     },
     "readings_count": 11,
     "limitations": [],
@@ -52,7 +51,7 @@
         "matched_conditions": [
           "freq=39.0 < setpoint 40.0",
           "power=450.0 >= 400",
-          "current=615.0 vs CMA10550.0 \u0394+65.0 |\u0394|65.0>=10",
+          "current=615.0 vs CMA10550.0 Δ+65.0 |Δ|65.0>=10",
           "torque=95.0 >= 90%"
         ],
         "total_conditions": 4
@@ -109,6 +108,7 @@
         "matched_conditions": [],
         "total_conditions": 1
       }
-    ]
+    ],
+    "pump_id": 5000
   }
 }
