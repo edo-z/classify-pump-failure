@@ -320,7 +320,11 @@ function renderRules(item) {
 }
 
 function renderCurl(item) {
-  const payload = JSON.stringify(item.input, null, 2);
+  const payload = JSON.stringify({
+    flowhead: 500,
+    pump_id: "34",
+    readings: item.input.readings || []
+  }, null, 2);
   state.curl = `socket.emit("classify", ${payload}, (response) => {
   if (response.ok) console.log(response.data);
   else console.error(response.error);

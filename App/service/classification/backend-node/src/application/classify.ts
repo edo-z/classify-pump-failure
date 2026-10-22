@@ -100,7 +100,7 @@ function parseReading(raw: unknown): SensorReading {
 
 export interface ClassifyResponseBody {
   profile_id: string;
-  namespace: string;
+  pump_id: string;
   evidence_size: number;
   classification: Record<string, unknown>;
 }
@@ -136,10 +136,14 @@ export function classifyRequest(rawBody: unknown): ClassifyResponseBody {
   }
   const body = rawBody as Record<string, unknown>;
 
-  const profile_id = requireString(body.profile_id, "profile_id");
-  const namespace = requireString(body.namespace, "namespace");
-  if (namespace.length < 1) throw new ValidationError("namespace: too short");
-  if (namespace.length > 64) throw new ValidationError("namespace: too long");
+  const flowheadRaw = body.flowhead;
+  if (flowheadRaw === undefined || flowheadRaw === null) {
+    throw new ValidationError("flowhead: field required");
+  }
+  const profile_id = String(flowheadRaw);
+  const pump_id_val = requireString(body.pump_id, "pump_id");
+  if (pump_id_val.length < 1) throw new ValidationError("pump_id: too short");
+  if (pump_id_val.length > 64) throw new ValidationError("pump_id: too long");
   const setpoint_freq = coerceFloat(body.setpoint_freq, "setpoint_freq");
 
   const rawReadings = body.readings;
@@ -183,12 +187,12 @@ export function classifyRequest(rawBody: unknown): ClassifyResponseBody {
     evidence,
     { pump_id: capacity_lps, capacity_lps },
     operating_setpoint,
-    `site:${namespace}`,
+    `site:${pump_id_val}`,
   );
 
   return {
     profile_id,
-    namespace,
+    pump_id: pump_id_val,
     evidence_size: evidence.length,
     classification: serializeClassification(classification),
   };

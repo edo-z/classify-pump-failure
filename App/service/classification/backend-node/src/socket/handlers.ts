@@ -66,12 +66,9 @@ function profileIdFrom(payload: unknown): string | null {
   if (typeof payload !== "object" || Array.isArray(payload)) {
     throw new ValidationError("body: request body must be an object");
   }
-  const profileId = (payload as Record<string, unknown>).profile_id;
-  if (profileId === undefined) return null;
-  if (typeof profileId !== "string" || profileId.length === 0) {
-    throw new ValidationError("profile_id: field required");
-  }
-  return profileId;
+  const flowhead = (payload as Record<string, unknown>).flowhead;
+  if (flowhead === undefined || flowhead === null) return null;
+  return String(flowhead);
 }
 
 export function registerSocketHandlers(
@@ -112,11 +109,11 @@ export function registerSocketHandlers(
           throw new ValidationError("body: request body must be an object");
         }
         const body = payload as Record<string, unknown>;
-        const profileId = body.profile_id;
-        if (typeof profileId !== "string" || profileId.length === 0) {
-          throw new ValidationError("profile_id: field required");
+        const flowhead = body.flowhead;
+        if (flowhead === undefined || flowhead === null) {
+          throw new ValidationError("flowhead: field required");
         }
-        return updateSetpoint(profileId, body);
+        return updateSetpoint(String(flowhead), body);
       });
     });
 
