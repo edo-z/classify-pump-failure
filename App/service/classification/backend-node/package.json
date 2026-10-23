@@ -12,14 +12,12 @@
     "start": "node src/server.ts",
     "apply-schema": "node scripts/apply-schema.ts",
     "seed": "node scripts/seed-reference.ts",
-    "test:setup-db": "node scripts/setup-test-db.ts",
     "test": "node --test test/unit/ test/golden/ test/differential/ test/socket/",
     "test:unit": "node --test test/unit/",
     "test:golden": "node --test test/golden/",
     "test:differential": "node --test test/differential/",
     "test:socket": "node --test test/socket/",
-    "test:integration": "node --test test/integration/",
-    "test:all": "npm test && npm run test:integration"
+    "test:repositories": "node --test test/repositories/"
   },
   "dependencies": {
     "decimal.js": "^10.4.3",

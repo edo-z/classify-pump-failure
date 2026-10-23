@@ -13,15 +13,6 @@ export {
 } from "./parameterRepo.ts";
 
 export {
-  upsertLatest,
-  upsertLatestBatch,
-  getLatest,
-  getLatestForParams,
-  type RealtimeRow,
-  type UpsertItem,
-} from "./realtimeRepo.ts";
-
-export {
   get,
   upsert,
   merge,
