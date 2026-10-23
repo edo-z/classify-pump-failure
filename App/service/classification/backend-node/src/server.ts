@@ -9,6 +9,9 @@ import {
   registerSocketHandlers,
   type SocketHandlerDeps,
 } from "./socket/handlers.ts";
+import { loadDbConfig } from "./config/db.ts";
+import { getPool, closePool } from "./db/pool.ts";
+import { refreshIdMap } from "./repositories/parameterRepo.ts";
 
 function socketOptions(): Partial<ServerOptions> {
   const origin = (process.env.CLASSIFICATION_SOCKET_ORIGIN ?? "").trim();
@@ -44,9 +47,31 @@ export interface RunningServer {
   close: () => Promise<void>;
 }
 
+async function initPersistence(): Promise<boolean> {
+  let dbConfig: ReturnType<typeof loadDbConfig>;
+  try {
+    dbConfig = loadDbConfig();
+  } catch (e) {
+    console.warn("[db] no database config provided, running degraded");
+    return false;
+  }
+  try {
+    const pool = getPool();
+    await pool.query("SELECT 1");
+    await refreshIdMap();
+    console.log("[db] persistence ready");
+    return true;
+  } catch (e) {
+    console.warn("[db] persistence unavailable, running degraded");
+    return false;
+  }
+}
+
 export async function startServer(
   options: StartServerOptions = {},
 ): Promise<RunningServer> {
+  await initPersistence();
+
   const httpServer = createServer();
   const io = new Server(httpServer, socketOptions());
   registerSocketHandlers(io, options.socketDeps);
@@ -76,6 +101,7 @@ export async function startServer(
     await new Promise<void>((resolve) => {
       io.close(() => resolve());
     });
+    await closePool();
   };
 
   return { io, upstream, host, port, close };
