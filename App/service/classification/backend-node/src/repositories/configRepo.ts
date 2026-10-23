@@ -25,7 +25,7 @@ export async function get(
 ): Promise<ConfigRow | null> {
   const sql = `
     SELECT pump_id, operating_freq_hz, operating_rpm, operating_torque, ref_power_kw, ref_current_a, updated_at
-    FROM classification_config
+    FROM failure_config
     WHERE pump_id = :pumpId
   `;
   const params = { pumpId };
@@ -41,7 +41,7 @@ export async function upsert(
   conn?: PoolConnection
 ): Promise<void> {
   const sql = `
-    INSERT INTO classification_config (pump_id, operating_freq_hz, operating_rpm, operating_torque, ref_power_kw, ref_current_a)
+    INSERT INTO failure_config (pump_id, operating_freq_hz, operating_rpm, operating_torque, ref_power_kw, ref_current_a)
     VALUES (:pumpId, :operating_freq_hz, :operating_rpm, :operating_torque, :ref_power_kw, :ref_current_a)
     ON DUPLICATE KEY UPDATE
       operating_freq_hz = VALUES(operating_freq_hz),

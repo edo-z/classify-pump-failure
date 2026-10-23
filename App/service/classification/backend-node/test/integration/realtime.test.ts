@@ -44,7 +44,7 @@ describe("integration: realtime", { skip: !hasTestDb }, () => {
   });
 
   test("upsertLatest inserts new reading", async () => {
-    const pump = await createPump("test-pump-1", null);
+    const pump = await createPump("test-pump-1");
     const paramDefId = paramIdMap.get("motor_current")!;
     const ts = new Date("2026-01-01T10:00:00.000Z");
 
@@ -57,7 +57,7 @@ describe("integration: realtime", { skip: !hasTestDb }, () => {
   });
 
   test("upsertLatest updates value when newer timestamp", async () => {
-    const pump = await createPump("test-pump-2", null);
+    const pump = await createPump("test-pump-2");
     const paramDefId = paramIdMap.get("output_frequency")!;
     const ts1 = new Date("2026-01-01T10:00:00.000Z");
     const ts2 = new Date("2026-01-01T10:00:01.000Z");
@@ -71,7 +71,7 @@ describe("integration: realtime", { skip: !hasTestDb }, () => {
   });
 
   test("upsertLatest ignores stale timestamp", async () => {
-    const pump = await createPump("test-pump-3", null);
+    const pump = await createPump("test-pump-3");
     const paramDefId = paramIdMap.get("motor_speed")!;
     const ts1 = new Date("2026-01-01T10:00:00.000Z");
     const ts2 = new Date("2026-01-01T09:59:59.000Z"); // older

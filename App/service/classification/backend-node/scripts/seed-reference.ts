@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 
 import { loadDbConfig } from "../src/config/db.ts";
 import { getPool, closePool } from "../src/db/pool.ts";
-import { getOrCreate as createFlowhead, getAll as getAllFlowheads } from "../src/repositories/flowheadRepo.ts";
 import { getOrCreate as createParameter, getAll as getAllParameters, refreshIdMap } from "../src/repositories/parameterRepo.ts";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -31,29 +30,11 @@ const CANONICAL_PARAMETERS = [
   "arus_rms_w",
 ] as const;
 
-export async function loadProfileSetpoints(): Promise<string[]> {
-  const filePath = path.resolve(__dirname, "../src/engine/profile_setpoints.json");
-  const content = await fs.readFile(filePath, "utf-8");
-  const data = JSON.parse(content);
-  return Object.keys(data).sort();
-}
-
-export async function seedFlowheads(): Promise<void> {
-  console.log("[seed] Seeding flowheads...");
-  const flowheadTypes = await loadProfileSetpoints();
-  for (const type of flowheadTypes) {
-    const fh = await createFlowhead(type);
-    console.log(`[seed]   flowhead: ${fh.type_flowhead} (id=${fh.id})`);
-  }
-  const all = await getAllFlowheads();
-  console.log(`[seed] Total flowheads: ${all.length}`);
-}
-
 export async function seedParameters(): Promise<void> {
   console.log("[seed] Seeding parameter definitions...");
   for (const key of CANONICAL_PARAMETERS) {
     const p = await createParameter(key);
-    console.log(`[seed]   parameter: ${p.key} (id=${p.id})`);
+    console.log(`[seed]   parameter: ${p.parameter} (id=${p.id})`);
   }
   const all = await getAllParameters();
   console.log(`[seed] Total parameters: ${all.length}`);
@@ -64,7 +45,6 @@ export async function runSeed(): Promise<void> {
   const config = loadDbConfig();
   console.log(`[seed] Database: ${config.database} @ ${config.host}:${config.port}`);
 
-  await seedFlowheads();
   await seedParameters();
   await refreshIdMap();
 

@@ -3,13 +3,13 @@ import { query, queryOne, executeInTransaction, queryInTransaction } from "../db
 
 export interface ParameterRow {
   id: number;
-  key: string;
+  parameter: string;
 }
 
 let paramIdCache: Map<string, number> | null = null;
 
 export async function getAll(conn?: PoolConnection): Promise<ParameterRow[]> {
-  const sql = `SELECT id, \`key\` FROM parameter_definitions ORDER BY id`;
+  const sql = `SELECT id, parameter FROM parameter_definitions ORDER BY id`;
   if (conn) {
     return queryInTransaction<ParameterRow[]>(conn, sql);
   }
@@ -17,14 +17,14 @@ export async function getAll(conn?: PoolConnection): Promise<ParameterRow[]> {
 }
 
 export async function getOrCreate(
-  key: string,
+  parameter: string,
   conn?: PoolConnection
 ): Promise<ParameterRow> {
-  const existing = await findByKey(key, conn);
+  const existing = await findByParameter(parameter, conn);
   if (existing) return existing;
 
-  const sql = `INSERT INTO parameter_definitions (\`key\`) VALUES (:key)`;
-  const params = { key };
+  const sql = `INSERT INTO parameter_definitions (parameter) VALUES (:parameter)`;
+  const params = { parameter };
   let result;
   if (conn) {
     result = await executeInTransaction(conn, sql, params);
@@ -32,15 +32,15 @@ export async function getOrCreate(
     const [res] = await import("../db/pool.ts").then(m => m.getPool().execute(sql, params));
     result = res as { insertId: number };
   }
-  return { id: result.insertId, key };
+  return { id: result.insertId, parameter };
 }
 
-export async function findByKey(
-  key: string,
+export async function findByParameter(
+  parameter: string,
   conn?: PoolConnection
 ): Promise<ParameterRow | null> {
-  const sql = `SELECT id, \`key\` FROM parameter_definitions WHERE \`key\` = :key`;
-  const params = { key };
+  const sql = `SELECT id, parameter FROM parameter_definitions WHERE parameter = :parameter`;
+  const params = { parameter };
   if (conn) {
     const rows = await queryInTransaction<ParameterRow[]>(conn, sql, params);
     return rows[0] ?? null;
@@ -57,7 +57,7 @@ export function getIdMap(): Map<string, number> {
 
 export async function refreshIdMap(conn?: PoolConnection): Promise<void> {
   const rows = await getAll(conn);
-  paramIdCache = new Map(rows.map(r => [r.key, r.id]));
+  paramIdCache = new Map(rows.map(r => [r.parameter, r.id]));
 }
 
 export function __resetIdMapForTest(): void {

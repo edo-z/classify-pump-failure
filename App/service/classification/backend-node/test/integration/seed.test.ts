@@ -49,7 +49,7 @@ describe("integration: seed", { skip: !hasTestDb }, () => {
   test("seed creates 16 canonical parameters", async () => {
     const params = await getAllParameters();
     assert.equal(params.length, 16, `expected 16 parameters, got ${params.length}`);
-    const keys = params.map(p => p.key).sort();
+    const keys = params.map(p => p.parameter).sort();
     assert.deepEqual(keys, [
       "ambient_temperature",
       "arus_rms_u",

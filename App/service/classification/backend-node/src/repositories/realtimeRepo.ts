@@ -1,5 +1,5 @@
 import type { PoolConnection } from "mysql2/promise";
-import { executeInTransaction, queryInTransaction, query, getPool } from "../db/index.ts";
+import { executeInTransaction, queryInTransaction, query, getPool, withTransaction } from "../db/index.ts";
 
 export interface RealtimeRow {
   id: number;
@@ -7,6 +7,12 @@ export interface RealtimeRow {
   parameter_definition_id: number;
   value: string | null;
   updated_at: Date;
+}
+
+export interface UpsertItem {
+  paramDefId: number;
+  value: string;
+  eventTimestamp: Date;
 }
 
 export async function upsertLatest(
@@ -40,6 +46,43 @@ export async function upsertLatest(
   } else {
     const pool = getPool();
     await pool.execute(sql, params);
+  }
+}
+
+export async function upsertLatestBatch(
+  pumpId: number,
+  items: UpsertItem[],
+  conn?: PoolConnection
+): Promise<void> {
+  if (items.length === 0) return;
+  const run = async (ctx: { connection: PoolConnection }) => {
+    for (const item of items) {
+      const sql = `
+        INSERT INTO pump_realtimes (pump_id, parameter_definition_id, value, updated_at)
+        VALUES (:pumpId, :paramDefId, :value, :eventTimestamp)
+        ON DUPLICATE KEY UPDATE
+          value = CASE
+            WHEN VALUES(updated_at) >= updated_at THEN VALUES(value)
+            ELSE value
+          END,
+          updated_at = CASE
+            WHEN VALUES(updated_at) >= updated_at THEN VALUES(updated_at)
+            ELSE updated_at
+          END
+      `;
+      const params = {
+        pumpId,
+        paramDefId: item.paramDefId,
+        value: item.value,
+        eventTimestamp: item.eventTimestamp.toISOString().slice(0, 23).replace("T", " "),
+      };
+      await executeInTransaction(ctx.connection, sql, params);
+    }
+  };
+  if (conn) {
+    await run({ connection: conn });
+  } else {
+    await withTransaction(run);
   }
 }
 

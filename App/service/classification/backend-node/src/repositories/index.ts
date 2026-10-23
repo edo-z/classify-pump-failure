@@ -1,29 +1,24 @@
 export {
-  findByType,
-  getOrCreate as getOrCreateFlowhead,
-  getAll as getAllFlowheads,
-} from "./flowheadRepo.ts";
-
-export {
   findByDexId,
   getOrCreate as getOrCreatePump,
-  setFlowhead,
   findById,
 } from "./pumpRepo.ts";
 
 export {
   getAll as getAllParameters,
   getOrCreate as getOrCreateParameter,
-  findByKey,
+  findByParameter,
   getIdMap,
   refreshIdMap,
 } from "./parameterRepo.ts";
 
 export {
   upsertLatest,
+  upsertLatestBatch,
   getLatest,
   getLatestForParams,
   type RealtimeRow,
+  type UpsertItem,
 } from "./realtimeRepo.ts";
 
 export {

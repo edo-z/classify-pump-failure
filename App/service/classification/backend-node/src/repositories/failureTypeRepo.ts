@@ -12,7 +12,7 @@ let failureTypeListCache: FailureTypeRow[] | null = null;
 
 export async function getAll(conn?: PoolConnection): Promise<FailureTypeRow[]> {
   if (failureTypeListCache) return failureTypeListCache;
-  const sql = `SELECT id, failure, name FROM failure_types ORDER BY id`;
+  const sql = `SELECT id, failure, name FROM failure_definitions ORDER BY id`;
   if (conn) {
     const rows = await queryInTransaction<FailureTypeRow[]>(conn, sql);
     failureTypeListCache = rows;
@@ -25,7 +25,7 @@ export async function getAll(conn?: PoolConnection): Promise<FailureTypeRow[]> {
 
 export async function getIdByCode(code: string, conn?: PoolConnection): Promise<number | null> {
   if (failureTypeCache?.has(code)) return failureTypeCache.get(code) ?? null;
-  const sql = `SELECT id FROM failure_types WHERE failure = :code`;
+  const sql = `SELECT id FROM failure_definitions WHERE failure = :code`;
   const params = { code };
   if (conn) {
     const row = await queryInTransaction<{ id: number } | null>(conn, sql, params);

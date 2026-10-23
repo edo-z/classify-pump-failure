@@ -7,8 +7,8 @@ import { normalizePumpUpdate } from "./telemetry.ts";
 import { loadDbConfig } from "../config/db.ts";
 import { getPool } from "../db/pool.ts";
 import { getOrCreate as createPump } from "../repositories/pumpRepo.ts";
-import { getIdMap as getParamIdMap } from "../repositories/parameterRepo.ts";
-import { upsertLatest } from "../repositories/realtimeRepo.ts";
+import { getIdMap as getParamIdMap, refreshIdMap } from "../repositories/parameterRepo.ts";
+import { upsertLatest, upsertLatestBatch } from "../repositories/realtimeRepo.ts";
 import {
   initRetryBuffer,
   enqueue,
@@ -39,14 +39,8 @@ export function toTelemetryPayload(
 
 let persistenceEnabled = false;
 
-function tryEnablePersistence(): void {
-  try {
-    getPool();
-    persistenceEnabled = true;
-    console.log("[dex-socket] persistence enabled");
-  } catch {
-    persistenceEnabled = false;
-  }
+async function tryEnablePersistence(): Promise<void> {
+  persistenceEnabled = false;
 }
 
 export function startSocketBridge(io: Server) {
@@ -70,7 +64,7 @@ export function startSocketBridge(io: Server) {
   }
   if (dbConfig) {
     initRetryBuffer(dbConfig);
-    tryEnablePersistence();
+    void tryEnablePersistence();
   }
 
   const upstream = createClient(dexUrl, {
@@ -92,7 +86,7 @@ export function startSocketBridge(io: Server) {
   upstream.on("connect", () => {
     console.log("[dex-socket] connected:", upstream.id);
     if (!persistenceEnabled) {
-      tryEnablePersistence();
+      void tryEnablePersistence();
     }
   });
 
@@ -127,19 +121,21 @@ export function startSocketBridge(io: Server) {
     }
 
     try {
+      const pump = await createPump(telemetry.pump_id);
+      const eventTime = new Date(telemetry.reading.timestamp.epochMs);
+      const items = [];
       for (const [paramKey, value] of Object.entries(fields)) {
         if (paramKey === "timestamp" || value === null) continue;
-
         const paramDefId = getParamIdMap().get(paramKey);
         if (!paramDefId) {
           console.warn(`[dex] unknown parameter ${paramKey} for pump ${telemetry.pump_id}`);
           continue;
         }
-
-        const pump = await createPump(telemetry.pump_id, null);
-        const eventTime = new Date(telemetry.reading.timestamp.epochMs);
-        await upsertLatest(pump.id, paramDefId, String(value), eventTime);
+        items.push({ paramDefId, value: String(value), eventTimestamp: eventTime });
         remove(telemetry.pump_id, paramKey);
+      }
+      if (items.length > 0) {
+        await upsertLatestBatch(pump.id, items);
       }
     } catch (e) {
       console.error("[dex] persistence error:", e);
@@ -152,7 +148,7 @@ export function startSocketBridge(io: Server) {
       processQueue(
         async (dpId) => {
           try {
-            return await createPump(dpId, null);
+            return await createPump(dpId);
           } catch {
             return null;
           }

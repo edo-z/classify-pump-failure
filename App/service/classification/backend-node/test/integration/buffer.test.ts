@@ -54,7 +54,7 @@ describe("integration: retry buffer", { skip: !hasTestDb }, () => {
   });
 
   test("enqueue and processQueue resolves pending writes", async () => {
-    const pump = await createPump("buffer-test-pump-1", null);
+    const pump = await createPump("buffer-test-pump-1");
     const paramDefId = paramIdMap.get("motor_current")!;
     const ts = new Date("2026-01-01T10:00:00.000Z");
 
@@ -64,7 +64,7 @@ describe("integration: retry buffer", { skip: !hasTestDb }, () => {
 
     // Process queue - should flush to DB
     await processQueue(
-      async (dpId) => await createPump(dpId, null),
+      async (dpId) => await createPump(dpId),
       (pKey) => paramIdMap.get(pKey) ?? null,
       async (pId, pDefId, val, t) => {
         await upsertLatest(pId, pDefId, val, t);
