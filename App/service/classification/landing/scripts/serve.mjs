@@ -12,17 +12,21 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const ROOT = fileURLToPath(new URL("./", import.meta.url));
+const ROOT = fileURLToPath(new URL("../public", import.meta.url));
 const HOST = process.env.HOST ?? "127.0.0.1";
 const PORT = Number(process.env.PORT ?? 3030);
 
 const ALLOWED = new Map([
   ["/", { file: "index.html", type: "text/html; charset=utf-8" }],
   ["/index.html", { file: "index.html", type: "text/html; charset=utf-8" }],
+  ["/config", { file: "config.html", type: "text/html; charset=utf-8" }],
+  ["/config.html", { file: "config.html", type: "text/html; charset=utf-8" }],
   ["/aturan", { file: "aturan.html", type: "text/html; charset=utf-8" }],
   ["/aturan.html", { file: "aturan.html", type: "text/html; charset=utf-8" }],
   ["/styles.css", { file: "styles.css", type: "text/css; charset=utf-8" }],
   ["/app.js", { file: "app.js", type: "text/javascript; charset=utf-8" }],
+  ["/config.js", { file: "config.js", type: "text/javascript; charset=utf-8" }],
+  ["/config.css", { file: "config.css", type: "text/css; charset=utf-8" }],
   ["/data.json", { file: "data.json", type: "application/json; charset=utf-8" }],
   ["/js/socket.io.min.js", { file: "js/socket.io.min.js", type: "text/javascript; charset=utf-8" }],
 ]);
@@ -88,6 +92,8 @@ const server = createServer(async (request, response) => {
         entry.file.endsWith(".html") ||
         entry.file === "styles.css" ||
         entry.file === "app.js" ||
+        entry.file === "config.js" ||
+        entry.file === "config.css" ||
         entry.file === "data.json"
           ? "no-cache"
           : "public, max-age=3600",

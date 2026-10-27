@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DEXMIN — Manajemen Konfigurasi</title>
+    <meta name="description" content="Kelola konfigurasi Flowhead, VFD, Global, dan Pump-specific untuk klasifikasi gangguan pompa." />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/config.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Lewati ke konten</a>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/" aria-label="DEXMIN, beranda">
+          <span class="monogram" aria-hidden="true">D</span>
+          <span class="brand-text">
+            <span class="brand-name">DEXMIN</span>
+            <span class="brand-sub">Manajemen konfigurasi</span>
+          </span>
+        </a>
+        <div class="topbar-meta">
+          <div class="service-status" role="status" aria-live="polite">
+            <span class="status-dot" id="status-dot" data-state="loading" aria-hidden="true"></span>
+            <span id="status-text">Memeriksa API…</span>
+          </div>
+          <a class="topbar-link" href="/">Diagnosa</a>
+          <a class="topbar-link" href="/aturan">Aturan</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page" id="main">
+      <section class="intro" aria-labelledby="page-title">
+        <h1 id="page-title">Manajemen Konfigurasi</h1>
+        <p class="lede">
+          Kelola parameter ambang batas untuk delapan gangguan pompa. Konfigurasi disimpan di MySQL dan digunakan langsung oleh Classification Engine. 
+          Nilai kosong (NULL) berarti parameter belum di-set — gangguan terkait akan "Belum Dapat Di Klasifikasi".
+        </p>
+      </section>
+
+      <noscript>
+        <p class="noscript">
+          Halaman ini memerlukan JavaScript untuk berfungsi.
+        </p>
+      </noscript>
+
+      <section class="config-tabs" aria-labelledby="tabs-title">
+        <div role="tablist" id="config-tabs-list">
+          <button role="tab" id="tab-pumps" aria-selected="true" aria-controls="panel-pumps" class="tab-button active">Pump</button>
+          <button role="tab" id="tab-flowhead" aria-selected="false" aria-controls="panel-flowhead" class="tab-button">Flowhead</button>
+          <button role="tab" id="tab-vfd" aria-selected="false" aria-controls="panel-vfd" class="tab-button">VFD</button>
+          <button role="tab" id="tab-global" aria-selected="false" aria-controls="panel-global" class="tab-button">Global</button>
+        </div>
+
+        <div role="tabpanel" id="panel-pumps" aria-labelledby="tab-pumps" class="tab-panel active">
+          <div class="pump-selector">
+            <label for="pump-select">Pilih Pompa:</label>
+            <select id="pump-select" aria-label="Pilih pompa">
+              <option value="">Memuat daftar pompa…</option>
+            </select>
+            <button id="refresh-pumps" class="button-secondary" type="button">Muat ulang</button>
+          </div>
+          <div id="pump-config" class="config-table-container" hidden>
+            <h3>Konfigurasi Pump-Specific (<span id="pump-config-count">0</span> parameter)</h3>
+            <p class="config-hint">Override spesifik untuk pompa ini. Prioritas tertinggi: Pump > Flowhead/VFD > Global.</p>
+            <table class="config-table" id="pump-config-table">
+              <thead>
+                <tr>
+                  <th>Kode Parameter</th>
+                  <th>Deskripsi</th>
+                  <th>Satuan</th>
+                  <th>Batas Min–Max</th>
+                  <th>Scope</th>
+                  <th>Nilai Saat Ini</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div role="tabpanel" id="panel-flowhead" aria-labelledby="tab-flowhead" class="tab-panel" hidden>
+          <div class="capacity-selector">
+            <label for="flowhead-capacity">Kapasitas Flowhead (L/s):</label>
+            <select id="flowhead-capacity" aria-label="Pilih kapasitas flowhead">
+              <option value="">Memuat kapasitas…</option>
+            </select>
+            <button id="refresh-flowhead" class="button-secondary" type="button">Muat ulang</button>
+          </div>
+          <div id="flowhead-config" class="config-table-container" hidden>
+            <h3>Konfigurasi Flowhead (<span id="flowhead-config-count">0</span> parameter)</h3>
+            <p class="config-hint">Default untuk semua pompa dengan kapasitas ini. Prioritas: Pump > Flowhead > Global.</p>
+            <table class="config-table" id="flowhead-config-table">
+              <thead>
+                <tr>
+                  <th>Kode Parameter</th>
+                  <th>Gangguan</th>
+                  <th>Deskripsi</th>
+                  <th>Satuan</th>
+                  <th>Batas Min–Max</th>
+                  <th>Nilai Saat Ini</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div role="tabpanel" id="panel-vfd" aria-labelledby="tab-vfd" class="tab-panel" hidden>
+          <div class="vfd-selector">
+            <label for="vfd-type">Tipe VFD:</label>
+            <select id="vfd-type" aria-label="Pilih tipe VFD">
+              <option value="">Memuat tipe VFD…</option>
+            </select>
+            <button id="refresh-vfd" class="button-secondary" type="button">Muat ulang</button>
+          </div>
+          <div id="vfd-config" class="config-table-container" hidden>
+            <h3>Konfigurasi VFD (<span id="vfd-config-count">0</span> parameter)</h3>
+            <p class="config-hint">Default untuk semua pompa dengan tipe VFD ini. Prioritas: Pump > VFD > Global.</p>
+            <table class="config-table" id="vfd-config-table">
+              <thead>
+                <tr>
+                  <th>Kode Parameter</th>
+                  <th>Gangguan</th>
+                  <th>Deskripsi</th>
+                  <th>Satuan</th>
+                  <th>Batas Min–Max</th>
+                  <th>Nilai Saat Ini</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div role="tabpanel" id="panel-global" aria-labelledby="tab-global" class="tab-panel" hidden>
+          <div id="global-config" class="config-table-container">
+            <h3>Konfigurasi Global (<span id="global-config-count">0</span> parameter)</h3>
+            <p class="config-hint">Fallback terendah untuk semua pompa. Prioritas: Pump > Flowhead/VFD > Global.</p>
+            <table class="config-table" id="global-config-table">
+              <thead>
+                <tr>
+                  <th>Kode Parameter</th>
+                  <th>Gangguan</th>
+                  <th>Deskripsi</th>
+                  <th>Satuan</th>
+                  <th>Batas Min–Max</th>
+                  <th>Nilai Saat Ini</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="effective-config" aria-labelledby="effective-title">
+        <header class="section-head">
+          <h2 id="effective-title">Konfigurasi Efektif per Pompa</h2>
+          <p>Lihat hasil resolusi lengkap: Pump → Flowhead/VFD → Global, dengan indikator sumber nilai.</p>
+        </header>
+        <div class="pump-selector">
+          <label for="effective-pump-select">Pilih Pompa:</label>
+          <select id="effective-pump-select" aria-label="Pilih pompa untuk melihat konfigurasi efektif">
+            <option value="">Memuat daftar pompa…</option>
+          </select>
+          <button id="refresh-effective" class="button-secondary" type="button">Muat ulang</button>
+        </div>
+        <div id="effective-config" class="config-table-container" hidden>
+          <table class="config-table" id="effective-config-table">
+            <thead>
+              <tr>
+                <th>Kode Parameter</th>
+                <th>Gangguan</th>
+                <th>Scope</th>
+                <th>Sumber</th>
+                <th>Nilai Efektif</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="missing-params" class="missing-warning" hidden>
+            <h4>Parameter Kosong (Belum Dapat Di Klasifikasi):</h4>
+            <ul id="missing-list"></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <span>DEXMIN · Manajemen Konfigurasi</span>
+        <span class="footer-meta">
+          <span id="footer-health">Status API…</span>
+          <span id="footer-checked">—</span>
+        </span>
+      </div>
+    </footer>
+
+    <template id="toast-template">
+      <div class="toast" role="alert" aria-live="polite">
+        <span class="toast-message"></span>
+        <button class="toast-close" type="button" aria-label="Tutup">&times;</button>
+      </div>
+    </template>
+
+    <script src="/js/socket.io.min.js" defer></script>
+    <script src="/config.js" defer></script>
+  </body>
+</html>

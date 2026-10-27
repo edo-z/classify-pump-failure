@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { applyEffectiveRefs, type EffectiveRefs } from "./configuration-resolver.ts";
 import { evaluateAll } from "./evaluators/index.ts";
 import { normalizeTelemetry, validateEnvelope, extractIdentity } from "./telemetry.ts";
-import { getDefaultConfigurationProvider } from "./configuration-provider.ts";
+import { getDefaultConfigurationProvider, type ConfigurationProvider } from "./configuration-provider.ts";
 import { StateManager } from "./state/index.ts";
 import { serializeWithState, type InternalResult } from "./output/serializer.ts";
 import type {
@@ -84,12 +84,14 @@ export class ClassificationEngine {
   private _stateManager: StateManager;
   private _outputMode: "poc" | "production";
   private _isPumpOff: IsPumpOffFn;
+  private _configProvider: ConfigurationProvider;
 
   constructor(
     rulesPath: URL | string,
     options: { 
       outputMode?: "poc" | "production";
       isPumpOff?: IsPumpOffFn;
+      configProvider?: ConfigurationProvider;
     } = {}
   ) {
     this._outputMode = options.outputMode ?? "poc";
@@ -98,6 +100,7 @@ export class ClassificationEngine {
     this._isPumpOff = options.isPumpOff ?? (() => {
       throw new Error("OD-01: isPumpOff not injected. Provide isPumpOff function to ClassificationEngine constructor.");
     });
+    this._configProvider = options.configProvider ?? getDefaultConfigurationProvider();
     this._loadRules(rulesPath);
   }
 
@@ -163,8 +166,7 @@ export class ClassificationEngine {
       }
 
       // 5. Resolve typed configuration using injected provider
-      const configProvider = getDefaultConfigurationProvider();
-      let config = await configProvider.resolve(identity);
+      let config = await this._configProvider.resolve(identity);
       draftState.config = config;
 
       // 6. Apply rule_config overrides if provided

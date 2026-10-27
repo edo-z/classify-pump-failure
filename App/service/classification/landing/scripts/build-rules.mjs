@@ -9,10 +9,10 @@ import { getProfileCapacity } from "../backend-node/src/engine/profiles.ts";
 import { resolveEffectiveSetpoint } from "../backend-node/src/engine/setpoints.ts";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const GOLDEN = path.resolve(HERE, "../backend-node/test/golden");
-const SETPOINTS_FILE = path.resolve(HERE, "../backend-node/src/engine/profile_setpoints.json");
-const TEMPLATE_FILE = path.join(HERE, "aturan.template.html");
-const OUT_FILE = path.join(HERE, "aturan.html");
+const GOLDEN = path.resolve(HERE, "../../backend-node/test/golden");
+const SETPOINTS_FILE = path.resolve(HERE, "../../backend-node/src/engine/profile_setpoints.json");
+const TEMPLATE_FILE = path.join(HERE, "../templates/aturan.template.html");
+const OUT_FILE = path.join(HERE, "../public/aturan.html");
 
 const PROFILE_IDS = ["500_lps", "3000_lps", "5000_lps"];
 const PROFILE_LABELS = {

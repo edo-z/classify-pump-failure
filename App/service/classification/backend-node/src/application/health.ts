@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 
 import { RULES_FILE } from "../engine/engine.ts";
-import { getDefaultConfigurationProvider } from "../engine/configuration-provider.ts";
+import { createDbConfigurationProvider } from "../engine/dbConfigurationProvider.ts";
+import { getPool, query } from "../db/index.ts";
 
 const SETPOINTS_FILE = new URL("../engine/profile_setpoints.json", import.meta.url);
 
@@ -15,6 +16,8 @@ export interface HealthStatus {
   setpoints_error: string | null;
   config_loaded: boolean;
   config_error: string | null;
+  db_connected: boolean;
+  db_error: string | null;
 }
 
 export async function getHealthStatus(): Promise<HealthStatus> {
@@ -51,10 +54,19 @@ export async function getHealthStatus(): Promise<HealthStatus> {
     }
   }
 
+  let dbConnected = false;
+  let dbError: string | null = null;
+  try {
+    await query("SELECT 1");
+    dbConnected = true;
+  } catch (exc) {
+    dbError = exc instanceof Error ? exc.message : "database connection failed";
+  }
+
   let configLoaded = false;
   let configError: string | null = null;
   try {
-    const provider = getDefaultConfigurationProvider();
+    const provider = createDbConfigurationProvider();
     await provider.resolve({ pumpId: "health-check", flowhead: 3000, flowheadId: null, vsdTypeId: null });
     configLoaded = true;
   } catch (exc) {
@@ -62,7 +74,7 @@ export async function getHealthStatus(): Promise<HealthStatus> {
   }
 
   return {
-    status: rulesLoaded && setpointsLoaded && configLoaded ? "ok" : "degraded",
+    status: rulesLoaded && setpointsLoaded && configLoaded && dbConnected ? "ok" : "degraded",
     rules_exists: rulesExists,
     rules_loaded: rulesLoaded,
     rules_error: rulesError,
@@ -71,5 +83,7 @@ export async function getHealthStatus(): Promise<HealthStatus> {
     setpoints_error: setpointsError,
     config_loaded: configLoaded,
     config_error: configError,
+    db_connected: dbConnected,
+    db_error: dbError,
   };
 }

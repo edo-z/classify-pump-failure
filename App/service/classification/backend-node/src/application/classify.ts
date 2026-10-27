@@ -4,6 +4,7 @@ import { TroubleType } from "../engine/models.ts";
 import { parseIso, serializeIso, type ZonedTimestamp } from "../util/timestamp.ts";
 import { NotFoundError, ValidationError } from "./errors.ts";
 import { readFile } from "node:fs/promises";
+import { createDbConfigurationProvider } from "../engine/dbConfigurationProvider.ts";
 
 const PROFILES_FILE = new URL("../engine/pump_profiles.json", import.meta.url);
 
@@ -125,9 +126,12 @@ const isPumpOff = (raw: RawTelemetryPayload): boolean => {
          (d.motor_current === 0 || d.output_power === 0);
 };
 
+const configProvider = createDbConfigurationProvider();
+
 const engine = new ClassificationEngine(RULES_FILE, {
   outputMode: "production",
   isPumpOff,
+  configProvider,
 });
 
 function toRawPayload(

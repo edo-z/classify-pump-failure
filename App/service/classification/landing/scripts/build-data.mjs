@@ -5,11 +5,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const BACKEND = path.resolve(HERE, "../backend-node");
+const BACKEND = path.resolve(HERE, "../../backend-node");
 const GOLDEN = path.join(BACKEND, "test/golden");
 const RULES_FILE = path.join(BACKEND, "src/engine/rules.json");
 const SETPOINTS_FILE = path.join(BACKEND, "src/engine/profile_setpoints.json");
-const OUT_FILE = path.join(HERE, "data.json");
+const OUT_FILE = path.join(HERE, "../public/data.json");
 
 const PROFILE_ID = "5000_lps";
 const PROFILE_LABEL = "5000 lps";

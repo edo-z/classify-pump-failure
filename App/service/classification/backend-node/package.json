@@ -12,6 +12,7 @@
     "start": "node src/server.ts",
     "apply-schema": "node scripts/apply-schema.ts",
     "seed": "node scripts/seed-reference.ts",
+    "seed:config-params": "node scripts/seedConfigParameters.ts",
     "test": "node --test test/unit/ test/golden/ test/differential/ test/socket/",
     "test:unit": "node --test test/unit/",
     "test:golden": "node --test test/golden/",
