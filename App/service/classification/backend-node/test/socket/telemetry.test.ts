@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { serializeIso, parseIso } from "../../src/util/timestamp.ts";
-import { toTelemetryPayload } from "../../src/socket/bridge.ts";
+import { toRawTelemetryPayload } from "../../src/socket/bridge.ts";
 import { normalizePumpUpdate } from "../../src/socket/telemetry.ts";
 
 const PAYLOAD = {
@@ -29,26 +29,21 @@ test("normalizePumpUpdate maps DEX fields into SensorReading", () => {
   assert.equal(telemetry.reading.control_board_temperature, null);
 });
 
-test("toTelemetryPayload emits the flat telemetry-update payload", () => {
-  const data = toTelemetryPayload(PAYLOAD, "21");
-  const timestamp = parseIso("2026-10-22T10:00:00+07:00");
+test("toRawTelemetryPayload emits the RawTelemetryPayload format", () => {
+  const data = toRawTelemetryPayload(PAYLOAD);
 
   assert.ok(data);
   assert.equal(data.pump_id, "21");
-  assert.equal(data.timestamp, serializeIso(timestamp!));
-  assert.equal(data.motor_speed, 990);
-  assert.equal(data.output_frequency, 40);
+  assert.equal(data.received_at, "2026-10-22 10:00:00+07:00");
+  assert.equal(data.data.motor_speed, 990);
+  assert.equal(data.data.output_frequency, 40);
+  assert.equal(data.flowhead, null);
+  assert.equal(data.flowhead_id, null);
+  assert.equal(data.vsdTypeId, null);
 });
 
-test("toTelemetryPayload rejects malformed and other-pump payloads", () => {
-  assert.equal(toTelemetryPayload(null, "21"), null);
-  assert.equal(toTelemetryPayload({ data: {} }, "21"), null);
-  assert.equal(toTelemetryPayload(PAYLOAD, "22"), null);
-  assert.equal(
-    toTelemetryPayload(
-      { ...PAYLOAD, pump_id: "22" },
-      "21",
-    ),
-    null,
-  );
+test("toRawTelemetryPayload rejects malformed payloads", () => {
+  assert.equal(toRawTelemetryPayload(null), null);
+  assert.equal(toRawTelemetryPayload({ data: {} }), null);
+  assert.equal(toRawTelemetryPayload({ pump_id: "21", data: { pump_id: "22" } }), null);
 });

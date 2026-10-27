@@ -35,7 +35,7 @@ for (const file of cases) {
     const expected = JSON.parse(
       readFileSync(path.join(GOLDEN_DIR, `${name}.expected.json`), "utf-8"),
     );
-    const response = classifyRequest(body);
+    const response = await classifyRequest(body);
     assert.deepStrictEqual(
       response,
       expected,

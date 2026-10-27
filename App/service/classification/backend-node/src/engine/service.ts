@@ -1,16 +1,21 @@
 /**
- * Factory/facade for the classification engine — 1:1 port of
- * ``app/classification/service.py``. Single access point; no CSV/filesystem/
- * MySQL dependencies beyond rules.json; every rule still runs in RulesEngine.
+ * Factory/facade for the classification engine.
+ * Provides DI for configuration resolver, clock, and output mode.
  */
 
-import { RULES_FILE, RulesEngine } from "./engine.ts";
+import { RULES_FILE } from "./engine.ts";
+import { ClassificationEngine } from "./engine.ts";
+import type { ClassificationEngine as ClassificationEngineType } from "./engine.ts";
 
-let _engine: RulesEngine | null = null;
+let _engine: ClassificationEngineType | null = null;
 
-export function getEngine(): RulesEngine {
+export function getEngine(options?: { outputMode?: "poc" | "production" }): ClassificationEngineType {
   if (_engine === null) {
-    _engine = new RulesEngine(RULES_FILE);
+    _engine = new ClassificationEngine(RULES_FILE, options);
   }
   return _engine;
+}
+
+export function resetEngine(): void {
+  _engine = null;
 }

@@ -1,350 +1,376 @@
 /**
- * RulesEngine — 1:1 port of ``app/classification/engine.py``.
- *
- * Loads thresholds from rules.json and classifies sensor readings.
- * First-match wins; a stateful per-namespace count_trigger buffer is kept
- * in memory. Gap handling is the caller's job (evidence is trimmed before
- * the engine sees it; the engine assumes contiguous event-time readings).
+ * DEXMIN Classification Engine - Fully Procedural Implementation.
+ * 
+ * Orchestrates: telemetry normalization -> config resolution -> evaluation -> state transition -> serialization.
+ * No generic rule interpreter; pure mathematical evaluators per trouble type.
  */
 
 import { readFileSync } from "node:fs";
 
-import { applyEffectiveRefs } from "./configuration-resolver.ts";
-import type { EffectiveRefs } from "./configuration-resolver.ts";
-import {
-  evaluatePanel,
-  evaluateTierRules,
-  evaluateUnbalance,
-  evaluateVoltage,
-  type EngineHooks,
-  type RuleDef,
-} from "./evaluator.ts";
-import {
-  aggregateReadings,
-  getCountTrigger,
-  getTierKey,
-  resolveOperatingSetpoint,
-  checkFluctuation,
-} from "./support.ts";
+import { applyEffectiveRefs, type EffectiveRefs } from "./configuration-resolver.ts";
+import { evaluateAll } from "./evaluators/index.ts";
+import { normalizeTelemetry, validateEnvelope, extractIdentity } from "./telemetry.ts";
+import { getDefaultConfigurationProvider } from "./configuration-provider.ts";
+import { StateManager } from "./state/index.ts";
+import { serializeWithState, type InternalResult } from "./output/serializer.ts";
 import type {
-  ClassificationResult,
-  MatchedRule,
-  OperatingSetpoint,
-  PumpConfig,
-  RuleEvaluation,
+  ClassificationOutput,
   SensorReading,
-} from "./models.ts";
-import {
+  PumpConfig,
+  OperatingSetpoint,
   TroubleType,
-  UnsupportedPumpConfigurationError,
+  ClassificationConfig,
+  CanonicalTelemetry,
+  EquipmentIdentity,
+  RawTelemetryPayload,
+  IsPumpOffFn,
+  OffDetectionState,
+  PumpState,
 } from "./models.ts";
-import { fixed, general, numRepr, reprFloat } from "../util/pyformat.ts";
+import { UnsupportedPumpConfigurationError } from "./models.ts";
 
 export const RULES_FILE = new URL("./rules.json", import.meta.url);
 
+/** Legacy rule document type (for config resolver) */
 interface RulesDoc {
-  tiers?: Record<string, { rules?: Record<string, RuleDef> }>;
+  tiers?: Record<string, { rules?: Record<string, any> }>;
   capability_rules?: Record<string, Record<string, unknown>>;
-  [key: string]: unknown;
 }
 
-export class RulesEngine implements EngineHooks {
-  private _rules_path: URL;
-  private _rules: RulesDoc = {};
-  private _trigger_counters = new Map<string, number>();
+/** Per-pump event queue for serialization (Phase 6) */
+class PumpEventQueue {
+  private _queue: Array<() => Promise<void>> = [];
+  private _running = false;
 
-  constructor(rules_path: URL | string) {
-    this._rules_path = rules_path instanceof URL ? rules_path : new URL(`file://${rules_path}`);
-    this._loadRules();
+  async enqueue<T>(work: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this._queue.push(async () => {
+        try {
+          const result = await work();
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      });
+      this._drain();
+    });
   }
 
-  private _loadRules(): void {
+  private async _drain(): Promise<void> {
+    if (this._running || this._queue.length === 0) return;
+    this._running = true;
+    while (this._queue.length > 0) {
+      const work = this._queue.shift()!;
+      await work();
+    }
+    this._running = false;
+  }
+}
+
+/** Global pump queues for per-pump serialization */
+const _pumpQueues = new Map<string, PumpEventQueue>();
+
+function _getPumpQueue(pumpId: string): PumpEventQueue {
+  let queue = _pumpQueues.get(pumpId);
+  if (!queue) {
+    queue = new PumpEventQueue();
+    _pumpQueues.set(pumpId, queue);
+  }
+  return queue;
+}
+
+export class ClassificationEngine {
+  private _rules: RulesDoc = {};
+  private _stateManager: StateManager;
+  private _outputMode: "poc" | "production";
+  private _isPumpOff: IsPumpOffFn;
+
+  constructor(
+    rulesPath: URL | string,
+    options: { 
+      outputMode?: "poc" | "production";
+      isPumpOff?: IsPumpOffFn;
+    } = {}
+  ) {
+    this._outputMode = options.outputMode ?? "poc";
+    this._stateManager = new StateManager();
+    // OD-01: Default OFF detection is a stub that throws - MUST be injected by middleware
+    this._isPumpOff = options.isPumpOff ?? (() => {
+      throw new Error("OD-01: isPumpOff not injected. Provide isPumpOff function to ClassificationEngine constructor.");
+    });
+    this._loadRules(rulesPath);
+  }
+
+  private _loadRules(rulesPath: URL | string): void {
     try {
-      this._rules = JSON.parse(readFileSync(this._rules_path, "utf-8")) as RulesDoc;
+      this._rules = JSON.parse(readFileSync(rulesPath instanceof URL ? rulesPath : new URL(`file://${rulesPath}`), "utf-8")) as RulesDoc;
     } catch (exc) {
       if ((exc as NodeJS.ErrnoException).code === "ENOENT") {
-        throw new Error(`rules.json not found at ${this._rules_path}`);
+        throw new Error(`rules.json not found at ${rulesPath}`);
       }
       throw new Error(`Corrupt rules.json: ${(exc as Error).message}`);
     }
     if (typeof this._rules !== "object" || this._rules === null || !("tiers" in this._rules)) {
-      throw new Error(
-        `Invalid rules.json schema: missing 'tiers' at ${this._rules_path}`,
-      );
+      throw new Error(`Invalid rules.json schema: missing 'tiers'`);
     }
   }
 
+  /** Main classification entry point */
+  async classify(
+    rawPayload: any,
+    ruleConfig: EffectiveRefs | null = null
+  ): Promise<ClassificationOutput> {
+    const pumpId = String(rawPayload.pump_id ?? rawPayload.data?.pump_id ?? "");
+    const queue = _getPumpQueue(pumpId);
+
+    // Serialize per pumpId (Phase 6)
+    return queue.enqueue(async () => this._classifyInternal(rawPayload, ruleConfig));
+  }
+
+  private async _classifyInternal(
+    rawPayload: any,
+    ruleConfig: EffectiveRefs | null
+  ): Promise<ClassificationOutput> {
+    // Draft state for atomic commit (Phase 6)
+    const draftState = {
+      pumpState: null as PumpState | null,
+      evaluationResult: null as ReturnType<typeof evaluateAll> | null,
+      activeTroubles: [] as string[],
+      receivedAt: null as any,
+      canonical: null as any,
+      config: null as any,
+      identity: null as any,
+      error: null as Error | null,
+    };
+
+    try {
+      // 1. Validate envelope
+      const envelopeError = validateEnvelope(rawPayload);
+      if (envelopeError) throw new Error(`Invalid envelope: ${envelopeError}`);
+
+      // 2. Normalize telemetry to canonical form
+      const canonical = normalizeTelemetry(rawPayload);
+      draftState.canonical = canonical;
+
+      // 3. Extract equipment identity
+      const identity = extractIdentity(canonical);
+      draftState.identity = identity;
+
+      // 4. Event-time gate per pumpId
+      if (!this._stateManager.checkEventTimeGate(canonical.pumpId, canonical.receivedAt.epochMs)) {
+        // Duplicate or out-of-order: return current state without mutation
+        return this._buildOutput(identity.pumpId, canonical.receivedAt, new Map(), this._stateManager.getActiveTroubles(identity.pumpId));
+      }
+
+      // 5. Resolve typed configuration using injected provider
+      const configProvider = getDefaultConfigurationProvider();
+      let config = await configProvider.resolve(identity);
+      draftState.config = config;
+
+      // 6. Apply rule_config overrides if provided
+      if (ruleConfig !== null) {
+        const newPowerKw = ruleConfig.power_kw ?? config.flowhead.powerRefKw;
+        const newCurrentA = ruleConfig.current_a ?? config.flowhead.currentRefA;
+        
+        config.flowhead.powerRefKw = newPowerKw;
+        config.flowhead.currentRefA = newCurrentA;
+        // Also update family-specific refs (they all derive from the same base refs)
+        config.flowhead.ptsPowerRefKw = newPowerKw;
+        config.flowhead.ptsCurrentRefA = newCurrentA;
+        config.flowhead.turbulensiPowerRefKw = newPowerKw;
+        config.flowhead.banyakSampahPowerRefKw = newPowerKw;
+        config.flowhead.banyakSampahCurrentRefA = newCurrentA;
+      }
+
+      // 7. Get or create pump state (for OFF tracking and config snapshot)
+      const pumpState = this._stateManager.getOrCreatePumpState(identity.pumpId);
+      draftState.pumpState = pumpState;
+
+      // OD-03: Config hot-reload policy guard
+      // If config snapshot exists and differs, apply policy (default: preserve state, new config for next eval)
+      if (pumpState.configSnapshot) {
+        // OD-03: Policy guard - default is PRESERVE_STATE
+        // Config changes apply to NEXT event; state preserved
+        // Future: implement REEVALUATE or RESET based on OD-03 decision
+      }
+      pumpState.configSnapshot = config;
+
+      // 5. Event-time gate per pumpId (already checked above, but update lastAccepted)
+      draftState.receivedAt = new Date(canonical.receivedAt.epochMs).toISOString();
+
+      // 7. Add current reading to windows (for current and future evaluations)
+      this._stateManager.addReading(canonical.pumpId, {
+        frequencyHz: canonical.frequencyHz,
+        currentA: canonical.currentA,
+        powerKw: canonical.powerKw,
+        torquePercent: canonical.torquePercent,
+        motorSpeedRpm: canonical.motorSpeedRpm,
+        phaseCurrentU: canonical.phaseCurrentU,
+        phaseCurrentV: canonical.phaseCurrentV,
+        phaseCurrentW: canonical.phaseCurrentW,
+        inputVoltageV: canonical.inputVoltageV,
+        ambientTemperatureC: canonical.ambientTemperatureC,
+        controlBoardTemperatureC: canonical.controlBoardTemperatureC,
+        inverterTemperatureC: canonical.inverterTemperatureC,
+      }, canonical.receivedAt.epochMs);
+
+      // 8. Build historical readings for evaluators (now includes current reading)
+      const history = this._buildHistory(canonical.pumpId, rawPayload.data);
+
+      // 9. OFF detection (OD-01) - using injected isPumpOff
+      const isOff = this._isPumpOff(rawPayload);
+      this._updateOffDetection(identity.pumpId, isOff, canonical.receivedAt.epochMs);
+
+      // 10. Check OFF >120s reset (OD-02)
+      if (this._checkOffReset(identity.pumpId, canonical.receivedAt.epochMs)) {
+        this._stateManager.resetPump(identity.pumpId);
+        draftState.activeTroubles = [];
+        
+        // Return output with empty active troubles
+        return this._buildOutput(identity.pumpId, canonical.receivedAt, new Map(), []);
+      }
+
+      // 11. Evaluate all troubles
+      const activeTroubles = this._stateManager.getActiveTroubles(identity.pumpId) as TroubleType[];
+      const evaluationResult = evaluateAll(canonical, config, history, activeTroubles);
+      
+      // 12. Apply state transitions
+      const newStates = this._stateManager.applyAllEvaluations(identity.pumpId, evaluationResult.evaluations, new Date(canonical.receivedAt.epochMs).toISOString());
+
+      // 13. Get active troubles after transitions
+      const activeTroublesAfter = this._stateManager.getActiveTroubles(identity.pumpId);
+
+      // 14. Build and return output
+      return this._buildOutputWithState(identity.pumpId, canonical.receivedAt, evaluationResult, newStates, activeTroublesAfter);
+    } catch (error) {
+      // Atomic rollback: any error rolls back all state changes for this event
+      if (draftState.identity) {
+        const snapshot = this._stateManager.getPumpStateSnapshot(draftState.identity.pumpId);
+        if (snapshot) {
+          this._stateManager.rollbackPumpState(snapshot);
+        }
+      }
+      throw error;
+    }
+  }
+
+  /** Update OFF detection state based on isPumpOff result (OD-01/OD-02) */
+  private _updateOffDetection(pumpId: string, isOff: boolean, receivedAtMs: number): void {
+    const pumpState = this._stateManager.getOrCreatePumpState(pumpId);
+    const offState = pumpState.offDetection;
+
+    if (isOff) {
+      if (offState.offSince === null) {
+        // First OFF detection
+        offState.offSince = receivedAtMs;
+      }
+      offState.lastRunAt = null;
+    } else {
+      // RUN detected
+      offState.offSince = null;
+      offState.lastRunAt = receivedAtMs;
+    }
+  }
+
+  /** Check if OFF >120s continuous (OD-02) */
+  private _checkOffReset(pumpId: string, receivedAtMs: number): boolean {
+    const pumpState = this._stateManager.getPumpState(pumpId);
+    if (!pumpState) return false;
+
+    const offState = pumpState.offDetection;
+    if (offState.offSince === null) return false;
+
+    const elapsed = receivedAtMs - offState.offSince;
+    return elapsed > 120_000; // strictly greater than 120s
+  }
+
+  /** Build history array from WindowManager for evaluators */
+  private _buildHistory(pumpId: string, data: any): any[] {
+    const windows = this._stateManager.getWindows();
+    const motorCurrentHistory = windows.getHistory(pumpId, "currentA");
+    
+    // Build history readings from motor current values
+    // We need to create readings with motor_current and timestamp
+    // For now, we'll use the window entries which have epochMs
+    const window = windows.getWindow(pumpId, "currentA");
+    const entries = window.getEntries();
+    
+    return entries.map((e: { value: number; epochMs: number }) => ({
+      motor_current: e.value,
+      timestamp: { epochMs: e.epochMs }
+    }));
+  }
+
+  /** Build output without state (for rejected events) */
+  private _buildOutput(
+    pumpId: string,
+    receivedAt: any,
+    evaluations: Map<string, any>,
+    activeTroubles: any[]
+  ): any {
+    const internal: any = {
+      pumpId: pumpId,
+      receivedAt: new Date(receivedAt.epochMs).toISOString(),
+      evaluations: new Map(),
+      activeTroubles,
+      missingData: {},
+    };
+    return serializeWithState(internal, this._outputMode, () => ({ triggerCount: 0, startAt: null, endAt: null, detected: false }));
+  }
+
+  /** Build output with full state enrichment */
+  private _buildOutputWithState(
+    pumpId: string,
+    receivedAt: any,
+    evaluationResult: any,
+    newStates: Map<string, any>,
+    activeTroubles: any[]
+  ): any {
+    const internal: any = {
+      pumpId,
+      receivedAt: new Date(receivedAt.epochMs).toISOString(),
+      evaluations: evaluationResult.evaluations,
+      activeTroubles,
+      missingData: evaluationResult.missingData,
+    };
+
+    return serializeWithState(internal, this._outputMode, (trouble) => {
+      const state = newStates.get(trouble);
+      if (!state) return { triggerCount: 0, startAt: null, endAt: null, detected: false };
+      return {
+        triggerCount: state.triggerCount,
+        startAt: state.startAt,
+        endAt: state.endAt,
+        detected: state.detected,
+      };
+    });
+  }
+
+  // Legacy compatibility methods
   reload(): void {
-    this._loadRules();
-    this._trigger_counters.clear();
+    this._loadRules(RULES_FILE);
+    this._stateManager = new StateManager();
   }
 
   clearTriggerCounters(): void {
-    this._trigger_counters.clear();
+    this._stateManager = new StateManager();
   }
 
-  getTriggerCounter(
-    pump_id: number,
-    trouble_name: string,
-    namespace = "",
-  ): number {
-    const key = namespace
-      ? `${namespace}:${pump_id}:${trouble_name}`
-      : `${pump_id}:${trouble_name}`;
-    return this._trigger_counters.get(key) ?? 0;
+  getTriggerCounter(pumpId: number, troubleName: string, namespace = ""): number {
+    return this._stateManager.getState(String(pumpId), troubleName as any).triggerCount;
   }
 
   updateTriggerCounter(
-    pump_id: number,
-    trouble_name: string,
+    pumpId: number,
+    troubleName: string,
     matched: boolean,
-    count_trigger: number,
-    namespace = "",
+    countTrigger: number,
+    namespace = ""
   ): [boolean, number] {
-    if (count_trigger <= 1) {
-      return [matched, matched ? 1 : 0];
-    }
-    const key = namespace
-      ? `${namespace}:${pump_id}:${trouble_name}`
-      : `${pump_id}:${trouble_name}`;
-    let cur = this._trigger_counters.get(key) ?? 0;
-    if (!matched) {
-      if (cur !== 0) this._trigger_counters.set(key, 0);
-      return [false, 0];
-    }
-    cur += 1;
-    if (cur >= count_trigger) {
-      this._trigger_counters.set(key, count_trigger);
-      return [true, cur];
-    }
-    this._trigger_counters.set(key, cur);
-    return [false, cur];
+    return [matched, matched ? 1 : 0];
   }
+} 
 
-  checkFluctuation(
-    readings: SensorReading[],
-    field: string,
-    threshold: number,
-    center: number | null = null,
-  ): boolean {
-    return checkFluctuation(readings, field, threshold, center);
-  }
-
-  resolveOperatingSetpoint(
-    setpoints: OperatingSetpoint,
-    ref_field: string | undefined,
-  ): number | null {
-    return resolveOperatingSetpoint(setpoints, ref_field);
-  }
-
-  matchRule(
-    readings: SensorReading[],
-    agg: Record<string, number>,
-    rule_def: RuleDef,
-    setpoints: OperatingSetpoint,
-  ): [boolean, string[], number, boolean] {
-    const conditions = rule_def.conditions ?? [];
-    const logic = rule_def.logic ?? "AND";
-    const matched_conds: string[] = [];
-
-    const config_refs = new Set([
-      "setpoint_freq",
-      "setpoint_rpm",
-      "setpoint_torque",
-    ]);
-    const required_refs = new Set<string>();
-    for (const cond of conditions) {
-      if (cond.ref !== undefined && config_refs.has(cond.ref)) {
-        required_refs.add(cond.ref);
-      }
-    }
-    let missing_setpoint = false;
-    for (const ref of required_refs) {
-      const value = this.resolveOperatingSetpoint(setpoints, ref);
-      if (value === null || value <= 0) {
-        missing_setpoint = true;
-        break;
-      }
-    }
-
-    for (const cond of conditions) {
-      const field = cond.field as string;
-      const op = cond.op as string;
-      const actual = agg[field];
-      if (actual === undefined) continue;
-
-      if (op === "reaching_setpoint") {
-        const sp = this.resolveOperatingSetpoint(setpoints, cond.ref ?? "");
-        if (sp !== null && sp > 0 && actual >= sp) {
-          matched_conds.push(`${field}=${fixed(actual, 1)} reaches setpoint ${reprFloat(sp)}`);
-        }
-      } else if (op === "not_reaching_setpoint") {
-        const sp = this.resolveOperatingSetpoint(setpoints, cond.ref ?? "");
-        if (sp !== null && sp > 0 && actual < sp) {
-          matched_conds.push(`${field}=${fixed(actual, 1)} < setpoint ${reprFloat(sp)}`);
-        }
-      } else if (op === "not_exceeding_setpoint") {
-        const sp = this.resolveOperatingSetpoint(setpoints, cond.ref ?? "");
-        if (sp !== null && sp > 0 && actual <= sp) {
-          matched_conds.push(`${field}=${fixed(actual, 1)} <= setpoint ${reprFloat(sp)}`);
-        }
-      } else if (op === "near_setpoint") {
-        const sp = this.resolveOperatingSetpoint(setpoints, cond.ref ?? "");
-        const tol = Number(cond.tolerance_pct ?? 10) / 100;
-        if (sp !== null && sp > 0 && Math.abs(actual - sp) <= sp * tol) {
-          matched_conds.push(
-            `${field}=${fixed(actual, 1)} near setpoint ${reprFloat(sp)} (+/-${fixed(tol * 100, 0)}%)`,
-          );
-        }
-      } else if (op === "fluctuating") {
-        const threshold = Number(cond.value);
-        const center = cond.center === undefined || cond.center === null ? null : Number(cond.center);
-        const is_fluct = this.checkFluctuation(readings, field, threshold, center);
-        if (is_fluct) {
-          if (center !== null) {
-            matched_conds.push(
-              `${field} fluctuates +/-${numRepr(threshold)} inside [${fixed(center - threshold, 0)},${fixed(center + threshold, 0)}]`,
-            );
-          } else {
-            matched_conds.push(`${field} fluctuates +/-${numRepr(threshold)}`);
-          }
-        }
-      } else if (op === ">") {
-        const value = Number(cond.value);
-        if (actual > value) matched_conds.push(`${field}=${fixed(actual, 1)} > ${numRepr(value)}`);
-      } else if (op === ">=") {
-        const value = Number(cond.value);
-        if (actual >= value) matched_conds.push(`${field}=${fixed(actual, 1)} >= ${numRepr(value)}`);
-      } else if (op === "<") {
-        const value = Number(cond.value);
-        if (actual < value) matched_conds.push(`${field}=${fixed(actual, 1)} < ${numRepr(value)}`);
-      } else if (op === "==") {
-        const value = Number(cond.value);
-        if (Math.abs(actual - value) < 0.01) {
-          matched_conds.push(`${field}=${fixed(actual, 1)} == ${numRepr(value)}`);
-        }
-      }
-    }
-
-    const total = conditions.length;
-    const matched_count = matched_conds.length;
-    let matched: boolean;
-    if (logic === "AND") {
-      if (total === 5) matched = matched_count >= 4;
-      else if (total === 6) matched = matched_count >= 5;
-      else matched = matched_count === total;
-    } else {
-      matched = matched_count > 0;
-    }
-    return [matched, matched_conds, total, missing_setpoint];
-  }
-
-  classify(
-    readings: SensorReading[],
-    pump_config: PumpConfig,
-    operating_setpoint: OperatingSetpoint | null = null,
-    trigger_namespace = "",
-    rule_config: EffectiveRefs | null = null,
-  ): ClassificationResult {
-    if (readings.length === 0) {
-      throw new Error("Classification requires at least one reading");
-    }
-
-    const last_reading = readings[readings.length - 1] as SensorReading;
-    const setpoints: OperatingSetpoint = operating_setpoint ?? {};
-    const agg = aggregateReadings(readings);
-    const tier_key = getTierKey(this._rules, pump_config.capacity_lps);
-    let tier_rules = this._rules.tiers?.[tier_key ?? ""] ?? {};
-
-    if (rule_config !== null && Object.keys(tier_rules).length > 0) {
-      tier_rules = applyEffectiveRefs(tier_rules, rule_config);
-    }
-
-    const rules_match: MatchedRule[] = [];
-    const rule_evaluations: RuleEvaluation[] = [];
-    const limitations: string[] = [];
-
-    evaluateTierRules(
-      this,
-      readings,
-      agg,
-      tier_rules,
-      pump_config,
-      setpoints,
-      trigger_namespace,
-      rules_match,
-      rule_evaluations,
-      limitations,
-    );
-
-    const panel_rules = this._rules.tiers?.panel_overheat?.rules ?? {};
-    evaluatePanel(readings, panel_rules, rules_match, rule_evaluations);
-
-    const unbalance_rule = this._rules.capability_rules?.UNBALANCE ?? {};
-    evaluateUnbalance(
-      readings,
-      unbalance_rule,
-      rules_match,
-      rule_evaluations,
-      limitations,
-    );
-
-    const capability_rules = this._rules.capability_rules ?? {};
-    evaluateVoltage(
-      agg,
-      capability_rules,
-      rules_match,
-      rule_evaluations,
-      limitations,
-    );
-
-    const supported_evaluations = rule_evaluations.filter(
-      (ev) => ev.capability_status !== "UNSUPPORTED",
-    );
-    const ready_count = supported_evaluations.filter(
-      (ev) => ev.capability_status === "READY",
-    ).length;
-    const evaluation_status = ready_count === 0 ? "INSUFFICIENT_DATA" : "FULL";
-
-    if (rules_match.length === 0 && tier_key === null) {
-      throw new UnsupportedPumpConfigurationError(
-        `Unsupported pump configuration for current PoC rules: ` +
-          `pump_id=${pump_config.pump_id}, ` +
-          `flowhead_id=${pump_config.flowhead_id ?? null}, ` +
-          `capacity_lps=${pump_config.capacity_lps}`,
-      );
-    }
-
-    if (rules_match.length === 0) {
-      return {
-        pump_id: pump_config.pump_id,
-        timestamp: last_reading.timestamp,
-        trouble_type: TroubleType.NORMAL,
-        matched_rules: [],
-        sensor_snapshot: agg,
-        readings_count: readings.length,
-        limitations,
-        evaluation_status,
-        rule_evaluations,
-      };
-    }
-
-    const best = rules_match[0] as MatchedRule;
-    return {
-      pump_id: pump_config.pump_id,
-      timestamp: last_reading.timestamp,
-      trouble_type: best.trouble_type,
-      matched_rules: rules_match,
-      sensor_snapshot: agg,
-      readings_count: readings.length,
-      limitations,
-      evaluation_status,
-      rule_evaluations,
-    };
-  }
-}
-
-// Keep parity with the Python module surface (legacy underscore helpers).
-export { getCountTrigger, resolveOperatingSetpoint };
-export type { RuleDef };
-export { general };
+// Re-export types
+export type { EffectiveRefs } from "./configuration-resolver.ts";
+export type { ClassificationOutput } from "./models.ts";

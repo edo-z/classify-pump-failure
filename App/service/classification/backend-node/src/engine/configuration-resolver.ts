@@ -1,11 +1,12 @@
 /**
- * configuration-resolver — 1:1 port of
- * ``app/classification/configuration_resolver.py``.
+ * Configuration resolver — maps equipment identity to typed ClassificationConfig.
  *
- * Reference & Setpoint are user-changeable configuration; the equations and
- * classification logic stay with the engine. This module is pure: no DB,
- * no state. Priority per column: override -> flowhead -> profile default.
+ * Priority per field: override -> flowhead -> profile default.
+ * Pure functions: no DB, no state. DB queries happen in middleware, not here.
  */
+
+import type { ClassificationConfig, FlowheadConfig, VfdConfig, EquipmentIdentity } from "./models.ts";
+import { validateClassificationConfig } from "./configuration.ts";
 
 export interface EffectiveRefs {
   power_kw: number | null;
@@ -15,11 +16,11 @@ export interface EffectiveRefs {
 export function cleanPositive(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   const n = typeof value === "number" ? value : Number(value);
-  if (Number.isNaN(n) || n <= 0) return null;
+  if (Number.isNaN(n) || !Number.isFinite(n) || n <= 0) return null;
   return n;
 }
 
-/** Return the first valid level (override -> ... -> default). */
+/** Return the first valid level (override -> flowhead -> profile). */
 export function resolveLayeredValue(...levels: unknown[]): number | null {
   for (const level of levels) {
     const cleaned = cleanPositive(level);
@@ -50,36 +51,19 @@ export function resolveEffectiveRefs(
   };
 }
 
-const _REF_FIELDS: Record<string, keyof EffectiveRefs> = {
+const REF_FIELDS: Record<string, keyof EffectiveRefs> = {
   output_power: "power_kw",
   motor_current: "current_a",
 };
 
-interface Condition {
-  field?: string;
-  value?: unknown;
-  [key: string]: unknown;
-}
-
-interface RuleDef {
-  conditions?: Condition[];
-  [key: string]: unknown;
-}
-
-interface TierRules {
-  rules?: Record<string, RuleDef>;
-  [key: string]: unknown;
-}
-
 /**
- * Apply effective refs to a COPY of the tier rules (never mutates the
- * input). Thresholds, operators and logic are untouched; a ``null`` ref
- * leaves the corresponding condition value as-is.
+ * Apply effective refs to a COPY of the tier rules (never mutates the input).
+ * Thresholds, operators and logic are untouched; a ``null`` ref leaves the condition value as-is.
  */
 export function applyEffectiveRefs(
-  tier_rules: TierRules,
+  tier_rules: { rules?: Record<string, { conditions?: Array<{ field?: string; value?: unknown }> }> },
   refs: EffectiveRefs,
-): TierRules {
+): { rules?: Record<string, { conditions?: Array<{ field?: string; value?: unknown }> }> } {
   const effective = structuredClone(tier_rules);
   const overrides: Record<string, number | null> = {
     output_power: refs.power_kw,
@@ -98,4 +82,27 @@ export function applyEffectiveRefs(
   return effective;
 }
 
-export { _REF_FIELDS };
+/**
+ * Resolve operating setpoint value by reference field name.
+ * Maps ref_field to OperatingSetpoint keys.
+ */
+export function resolveOperatingSetpoint(
+  setpoints: { frequency?: number | null; rpm?: number | null; torque?: number | null },
+  ref_field: string | undefined,
+): number | null {
+  const field_map: Record<string, keyof typeof setpoints> = {
+    setpoint_freq: "frequency",
+    setpoint_rpm: "rpm",
+    setpoint_torque: "torque",
+  };
+  const field = field_map[ref_field ?? ""];
+  if (field === undefined) return null;
+  const value = setpoints[field];
+  return value === undefined ? null : value;
+}
+
+/** Re-export validation for external use. */
+export { validateClassificationConfig } from "./configuration.ts";
+
+/** Default ConfigurationProvider instance for testing and frozen cases. */
+export { getDefaultConfigurationProvider, resetDefaultConfigurationProvider } from "./configuration-provider.ts";

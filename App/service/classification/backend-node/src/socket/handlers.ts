@@ -10,9 +10,8 @@ import {
   listProfileSetpoints,
   readProfileSetpoint,
   updateProfileSetpoint,
+  type ProfileSetpoint,
 } from "../application/setpoints.ts";
-import { ProfileNotFoundError } from "../engine/profiles.ts";
-import type { ProfileSetpoint } from "../engine/setpoints.ts";
 
 export type SocketErrorCode = "VALIDATION" | "NOT_FOUND" | "INTERNAL";
 
@@ -21,11 +20,11 @@ export type SocketAck<T> =
   | { ok: false; error: { code: SocketErrorCode; message: string } };
 
 export interface SocketHandlerDeps {
-  classify?: (payload: unknown) => ClassifyResponseBody;
-  health?: () => HealthStatus;
-  listSetpoints?: () => Record<string, ProfileSetpoint>;
-  readSetpoint?: (profileId: string) => ProfileSetpoint;
-  updateSetpoint?: (profileId: string, body: unknown) => ProfileSetpoint;
+  classify?: (payload: unknown) => Promise<ClassifyResponseBody>;
+  health?: () => Promise<HealthStatus>;
+  listSetpoints?: () => Promise<Record<string, ProfileSetpoint>>;
+  readSetpoint?: (profileId: string) => Promise<ProfileSetpoint>;
+  updateSetpoint?: (profileId: string, body: unknown) => Promise<ProfileSetpoint>;
 }
 
 function socketError(exc: unknown): { code: SocketErrorCode; message: string } {
@@ -35,20 +34,14 @@ function socketError(exc: unknown): { code: SocketErrorCode; message: string } {
   if (exc instanceof NotFoundError) {
     return { code: "NOT_FOUND", message: exc.message };
   }
-  if (exc instanceof ProfileNotFoundError) {
-    return {
-      code: "NOT_FOUND",
-      message: `Unknown pump profile: ${exc.message}`,
-    };
-  }
   console.error("[classify] socket internal error:", exc);
   return { code: "INTERNAL", message: "Internal Server Error" };
 }
 
-function respond<T>(ack: unknown, run: () => T): void {
+async function respond<T>(ack: unknown, run: () => Promise<T>): Promise<void> {
   if (typeof ack !== "function") return;
   try {
-    ack({ ok: true, data: run() } satisfies SocketAck<T>);
+    ack({ ok: true, data: await run() } satisfies SocketAck<T>);
   } catch (exc) {
     ack({ ok: false, error: socketError(exc) } satisfies SocketAck<T>);
   }
@@ -94,14 +87,14 @@ export function registerSocketHandlers(
     });
 
     socket.on("profile-setpoints:get", (payload: unknown, ack: unknown) => {
-      respond(ackFrom(payload, ack), () => {
+      respond(ackFrom(payload, ack), async () => {
         const flowheadId = flowheadIdFrom(payload);
         return flowheadId === null ? listSetpoints() : readSetpoint(flowheadId);
       });
     });
 
     socket.on("profile-setpoints:update", (payload: unknown, ack: unknown) => {
-      respond(ack, () => {
+      respond(ack, async () => {
         if (
           payload === null ||
           typeof payload !== "object" ||

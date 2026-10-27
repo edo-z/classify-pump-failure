@@ -1,6 +1,7 @@
 import { io as createClient } from "socket.io-client";
 
 import type { Server } from "socket.io";
+import type { RawTelemetryPayload } from "../engine/models.ts";
 
 import { serializeIso } from "../util/timestamp.ts";
 import { normalizePumpUpdate } from "./telemetry.ts";
@@ -9,20 +10,20 @@ function readEnv(name: string): string {
   return (process.env[name] ?? "").trim();
 }
 
-export function toTelemetryPayload(
-  payload: unknown,
-  expectedPumpId: string,
-): Record<string, unknown> | null {
+export function toRawTelemetryPayload(payload: unknown): RawTelemetryPayload | null {
   const telemetry = normalizePumpUpdate(payload);
-  if (!telemetry || telemetry.pump_id !== expectedPumpId) {
+  if (!telemetry) {
     return null;
   }
 
   const { timestamp, ...fields } = telemetry.reading;
   return {
     pump_id: telemetry.pump_id,
-    timestamp: serializeIso(timestamp),
-    ...fields,
+    flowhead: null,
+    flowhead_id: null,
+    vsdTypeId: null,
+    received_at: serializeIso(timestamp).replace("T", " ").split(".")[0],
+    data: fields,
   };
 }
 
@@ -63,25 +64,18 @@ export function startSocketBridge(io: Server) {
   });
 
   upstream.on("pump-update", async (payload: unknown) => {
-    const telemetry = normalizePumpUpdate(payload);
-    if (!telemetry) {
+    const rawPayload = toRawTelemetryPayload(payload);
+    if (!rawPayload) {
       console.warn("[dex] invalid or unexpected telemetry ignored");
       return;
     }
 
-    const { timestamp, ...fields } = telemetry.reading;
-    const data = {
-      pump_id: telemetry.pump_id,
-      timestamp: serializeIso(timestamp),
-      ...fields,
-    };
-
-    io.emit("telemetry-update", data);
+    io.emit("telemetry-update", rawPayload);
 
     console.log(
       "[classify] telemetry-update:",
-      data.pump_id,
-      data.timestamp,
+      rawPayload.pump_id,
+      rawPayload.received_at,
     );
   });
 

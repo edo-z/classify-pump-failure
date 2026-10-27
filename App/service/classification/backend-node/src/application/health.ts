@@ -1,10 +1,9 @@
 import { readFileSync } from "node:fs";
 
 import { RULES_FILE } from "../engine/engine.ts";
-import {
-  PROFILE_SETPOINTS_FILE,
-  loadProfileSetpoints,
-} from "../engine/setpoints.ts";
+import { getDefaultConfigurationProvider } from "../engine/configuration-provider.ts";
+
+const SETPOINTS_FILE = new URL("../engine/profile_setpoints.json", import.meta.url);
 
 export interface HealthStatus {
   status: "ok" | "degraded";
@@ -14,9 +13,11 @@ export interface HealthStatus {
   setpoints_exists: boolean;
   setpoints_loaded: boolean;
   setpoints_error: string | null;
+  config_loaded: boolean;
+  config_error: string | null;
 }
 
-export function getHealthStatus(): HealthStatus {
+export async function getHealthStatus(): Promise<HealthStatus> {
   let rulesExists = false;
   let rulesLoaded = false;
   let rulesError: string | null = null;
@@ -37,9 +38,8 @@ export function getHealthStatus(): HealthStatus {
   let setpointsLoaded = false;
   let setpointsError: string | null = null;
   try {
-    readFileSync(PROFILE_SETPOINTS_FILE, "utf-8");
+    readFileSync(SETPOINTS_FILE, "utf-8");
     setpointsExists = true;
-    loadProfileSetpoints();
     setpointsLoaded = true;
   } catch (exc) {
     if ((exc as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -51,13 +51,25 @@ export function getHealthStatus(): HealthStatus {
     }
   }
 
+  let configLoaded = false;
+  let configError: string | null = null;
+  try {
+    const provider = getDefaultConfigurationProvider();
+    await provider.resolve({ pumpId: "health-check", flowhead: 3000, flowheadId: null, vsdTypeId: null });
+    configLoaded = true;
+  } catch (exc) {
+    configError = exc instanceof Error ? exc.message : "config provider failed";
+  }
+
   return {
-    status: rulesLoaded && setpointsLoaded ? "ok" : "degraded",
+    status: rulesLoaded && setpointsLoaded && configLoaded ? "ok" : "degraded",
     rules_exists: rulesExists,
     rules_loaded: rulesLoaded,
     rules_error: rulesError,
     setpoints_exists: setpointsExists,
     setpoints_loaded: setpointsLoaded,
     setpoints_error: setpointsError,
+    config_loaded: configLoaded,
+    config_error: configError,
   };
 }

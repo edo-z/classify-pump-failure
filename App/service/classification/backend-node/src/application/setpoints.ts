@@ -1,11 +1,13 @@
-import {
-  PROFILE_SETPOINTS_FILE,
-  getProfileSetpoint,
-  loadProfileSetpoints,
-  saveProfileSetpoint,
-  type ProfileSetpoint,
-} from "../engine/setpoints.ts";
-import { ValidationError } from "./errors.ts";
+import { readFile, writeFile } from "node:fs/promises";
+import { NotFoundError, ValidationError } from "./errors.ts";
+
+const SETPOINTS_FILE = new URL("../engine/profile_setpoints.json", import.meta.url);
+
+export type ProfileSetpoint = {
+  frequency_hz: number | null;
+  rpm: number | null;
+  torque: number | null;
+};
 
 function coerceGe0(value: unknown, field: string): number | null {
   if (value === null || value === undefined) return null;
@@ -20,12 +22,6 @@ function coerceGe0(value: unknown, field: string): number | null {
   return n;
 }
 
-/**
- * Merge a (possibly partial) update onto the current setpoint.
- *
- * An absent field keeps the stored value; an explicit ``null`` clears it.
- * This prevents a partial PUT from silently wiping ``rpm``/``torque``.
- */
 export function parseUpdate(
   rawBody: unknown,
   current: ProfileSetpoint,
@@ -45,25 +41,52 @@ export function parseUpdate(
   };
 }
 
-export function listProfileSetpoints(
-  path: URL | string = PROFILE_SETPOINTS_FILE,
-): Record<string, ProfileSetpoint> {
-  return loadProfileSetpoints(path);
+async function loadAll(path: URL | string = SETPOINTS_FILE): Promise<Record<string, ProfileSetpoint>> {
+  try {
+    const content = await readFile(path, "utf-8");
+    return JSON.parse(content) as Record<string, ProfileSetpoint>;
+  } catch (exc) {
+    if ((exc as NodeJS.ErrnoException).code === "ENOENT") {
+      return {};
+    }
+    throw exc;
+  }
 }
 
-export function readProfileSetpoint(
+async function saveAll(data: Record<string, ProfileSetpoint>, path: URL | string = SETPOINTS_FILE): Promise<void> {
+  await writeFile(path, JSON.stringify(data, null, 2), "utf-8");
+}
+
+export async function listProfileSetpoints(
+  path: URL | string = SETPOINTS_FILE,
+): Promise<Record<string, ProfileSetpoint>> {
+  return loadAll(path);
+}
+
+export async function readProfileSetpoint(
   flowheadId: string,
-  path: URL | string = PROFILE_SETPOINTS_FILE,
-): ProfileSetpoint {
-  return getProfileSetpoint(flowheadId, path);
+  path: URL | string = SETPOINTS_FILE,
+): Promise<ProfileSetpoint> {
+  const all = await loadAll(path);
+  const setpoint = all[flowheadId];
+  if (!setpoint) {
+    throw new NotFoundError(`Setpoint not found for flowhead: ${flowheadId}`);
+  }
+  return setpoint;
 }
 
-export function updateProfileSetpoint(
+export async function updateProfileSetpoint(
   flowheadId: string,
   rawBody: unknown,
-  path: URL | string = PROFILE_SETPOINTS_FILE,
-): ProfileSetpoint {
-  const current = getProfileSetpoint(flowheadId, path);
+  path: URL | string = SETPOINTS_FILE,
+): Promise<ProfileSetpoint> {
+  const all = await loadAll(path);
+  if (!all[flowheadId]) {
+    throw new NotFoundError(`Setpoint not found for flowhead: ${flowheadId}`);
+  }
+  const current = all[flowheadId];
   const setpoint = parseUpdate(rawBody, current);
-  return saveProfileSetpoint(flowheadId, setpoint, path);
+  all[flowheadId] = setpoint;
+  await saveAll(all, path);
+  return setpoint;
 }

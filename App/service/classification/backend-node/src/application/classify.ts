@@ -1,16 +1,30 @@
-import {
-  EVIDENCE_MAXLEN,
-  LIVE_GAP_THRESHOLD_MS,
-  buildTrailingEvidence,
-} from "../engine/evidence.ts";
-import type { ClassificationResult, SensorReading } from "../engine/models.ts";
-import { getProfileCapacity, ProfileNotFoundError } from "../engine/profiles.ts";
-import { getEngine } from "../engine/service.ts";
-import { resolveEffectiveSetpoint } from "../engine/setpoints.ts";
+import { ClassificationEngine, RULES_FILE, type ClassificationOutput } from "../engine/engine.ts";
+import type { RawTelemetryPayload, SensorReading } from "../engine/models.ts";
+import { TroubleType } from "../engine/models.ts";
 import { parseIso, serializeIso, type ZonedTimestamp } from "../util/timestamp.ts";
 import { NotFoundError, ValidationError } from "./errors.ts";
+import { readFile } from "node:fs/promises";
+
+const PROFILES_FILE = new URL("../engine/pump_profiles.json", import.meta.url);
 
 const MAX_WINDOW_READINGS = 40;
+
+async function validateProfile(profileId: string): Promise<void> {
+  try {
+    const content = await readFile(PROFILES_FILE, "utf-8");
+    const data = JSON.parse(content);
+    const profiles = data.profiles ?? {};
+    if (!profiles[profileId]) {
+      throw new NotFoundError(`Unknown pump profile: ${profileId}`);
+    }
+  } catch (exc) {
+    if (exc instanceof NotFoundError) throw exc;
+    if ((exc as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new NotFoundError(`Unknown pump profile: ${profileId}`);
+    }
+    throw exc;
+  }
+}
 
 const NUMERIC_FIELDS = [
   "motor_speed",
@@ -105,32 +119,90 @@ export interface ClassifyResponseBody {
   classification: Record<string, unknown>;
 }
 
-function serializeClassification(cls: ClassificationResult): Record<string, unknown> {
+const isPumpOff = (raw: RawTelemetryPayload): boolean => {
+  const d = raw.data ?? {};
+  return (d.output_frequency === 0 || d.motor_speed === 0) &&
+         (d.motor_current === 0 || d.output_power === 0);
+};
+
+const engine = new ClassificationEngine(RULES_FILE, {
+  outputMode: "production",
+  isPumpOff,
+});
+
+function toRawPayload(
+  readings: SensorReading[],
+  profileId: string,
+  pumpId: string,
+): RawTelemetryPayload {
+  const latest = readings[readings.length - 1];
+  const data: Record<string, unknown> = {};
+  for (const f of NUMERIC_FIELDS) {
+    data[f] = latest[f];
+  }
+  const flowheadNum = Number(profileId.replace("_lps", ""));
   return {
-    pump_id: cls.pump_id,
-    timestamp: serializeIso(cls.timestamp),
-    trouble_type: cls.trouble_type,
-    matched_rules: cls.matched_rules.map((r) => ({
-      trouble_type: r.trouble_type,
-      matched_conditions: r.matched_conditions,
-      total_conditions: r.total_conditions,
-    })),
-    sensor_snapshot: cls.sensor_snapshot,
-    readings_count: cls.readings_count,
-    limitations: cls.limitations,
-    evaluation_status: cls.evaluation_status,
-    rule_evaluations: cls.rule_evaluations.map((ev) => ({
-      trouble_type: ev.trouble_type,
-      capability_status: ev.capability_status,
-      evaluation: ev.evaluation,
-      missing_requirements: ev.missing_requirements,
-      matched_conditions: ev.matched_conditions,
-      total_conditions: ev.total_conditions,
-    })),
+    pump_id: pumpId,
+    flowhead: Number.isFinite(flowheadNum) ? flowheadNum : null,
+    flowhead_id: null,
+    vsdTypeId: null,
+    received_at: serializeIso(latest.timestamp).replace("T", " ").split(".")[0],
+    data,
   };
 }
 
-export function classifyRequest(rawBody: unknown): ClassifyResponseBody {
+function transformOutput(
+  output: ClassificationOutput,
+  flowhead: string,
+  pumpId: string,
+  evidenceSize: number,
+): ClassifyResponseBody {
+  const priority = [
+    TroubleType.POMPA_TERSANGKUT_SAMPAH,
+    TroubleType.TURBULENSI,
+    TroubleType.BANYAK_SAMPAH,
+    TroubleType.DRY_RUN,
+    TroubleType.UNBALANCE,
+    TroubleType.OVERVOLTAGE,
+    TroubleType.UNDERVOLTAGE,
+    TroubleType.PANEL_OVERHEAT,
+    TroubleType.NORMAL,
+  ];
+  const detected = output.results.find((r) => r.detected);
+  const troubleType = detected?.troubleType ?? TroubleType.NORMAL;
+
+  return {
+    flowhead,
+    pump_id: pumpId,
+    evidence_size: evidenceSize,
+    classification: {
+      pump_id: output.pumpId,
+      timestamp: output.receivedAt,
+      trouble_type: troubleType,
+      matched_rules: output.results
+        .filter((r) => r.detected)
+        .map((r) => ({
+          trouble_type: r.troubleType,
+          matched_conditions: [],
+          total_conditions: 0,
+        })),
+      sensor_snapshot: {},
+      readings_count: evidenceSize,
+      limitations: output.missingData,
+      evaluation_status: "completed",
+      rule_evaluations: output.results.map((r) => ({
+        trouble_type: r.troubleType,
+        capability_status: "ready",
+        evaluation: r.detected ? "triggered" : "not_triggered",
+        missing_requirements: output.missingData[r.troubleType] ?? [],
+        matched_conditions: [],
+        total_conditions: 0,
+      })),
+    },
+  };
+}
+
+export async function classifyRequest(rawBody: unknown): Promise<ClassifyResponseBody> {
   if (rawBody === null || typeof rawBody !== "object" || Array.isArray(rawBody)) {
     throw new ValidationError("body: request body must be an object");
   }
@@ -141,10 +213,10 @@ export function classifyRequest(rawBody: unknown): ClassifyResponseBody {
     throw new ValidationError("flowhead: field required");
   }
   const profile_id = String(flowheadRaw);
+  await validateProfile(profile_id);
   const pump_id_val = requireString(body.pump_id, "pump_id");
   if (pump_id_val.length < 1) throw new ValidationError("pump_id: too short");
   if (pump_id_val.length > 64) throw new ValidationError("pump_id: too long");
-  const setpoint_freq = coerceFloat(body.setpoint_freq, "setpoint_freq");
 
   const rawReadings = body.readings;
   if (!Array.isArray(rawReadings)) {
@@ -161,39 +233,18 @@ export function classifyRequest(rawBody: unknown): ClassifyResponseBody {
   const ordered = [...readings].sort(
     (a, b) => a.timestamp.epochMs - b.timestamp.epochMs,
   );
-  const evidence = buildTrailingEvidence(
-    ordered,
-    ordered.length - 1,
-    LIVE_GAP_THRESHOLD_MS,
-    EVIDENCE_MAXLEN,
-  );
-  if (evidence.length === 0) {
-    throw new ValidationError("No usable readings after gap trimming");
-  }
 
-  let capacity_lps: number;
+  const rawPayload = toRawPayload(ordered, profile_id, pump_id_val);
+
+  let output: ClassificationOutput;
   try {
-    capacity_lps = getProfileCapacity(profile_id);
+    output = await engine.classify(rawPayload);
   } catch (exc) {
-    if (exc instanceof ProfileNotFoundError) {
-      throw new NotFoundError(`Unknown pump profile: ${profile_id}`);
+    if (exc instanceof Error) {
+      throw new ValidationError(exc.message);
     }
     throw exc;
   }
 
-  const operating_setpoint = resolveEffectiveSetpoint(profile_id, setpoint_freq);
-  const engine = getEngine();
-  const classification = engine.classify(
-    evidence,
-    { pump_id: capacity_lps, capacity_lps },
-    operating_setpoint,
-    `site:${pump_id_val}`,
-  );
-
-  return {
-    flowhead: profile_id,
-    pump_id: pump_id_val,
-    evidence_size: evidence.length,
-    classification: serializeClassification(classification),
-  };
+  return transformOutput(output, profile_id, pump_id_val, ordered.length);
 }
