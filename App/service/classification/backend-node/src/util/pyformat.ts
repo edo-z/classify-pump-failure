@@ -24,7 +24,7 @@ function decompose(x: number): { mantissa: bigint; exp: number } {
   return { mantissa: frac | (1n << 52n), exp: exp - 1075 };
 }
 
-/** ``f"{x:.{k}f}"`` — exact round-half-even (Python ``format``). */
+/** ``f"{x:.{k}f}"`` — exact round-half-even (Python ``format``). */ 
 export function fixed(x: number, k: number): string {
   if (Number.isNaN(x)) return "nan";
   if (x === Infinity) return "inf";

@@ -1,117 +1,407 @@
 /**
- * Typed configuration schema and validation.
+ * DEXMIN — validation konfigurasi Classification Engine.
+ * Readiness dipisahkan per Failure agar konfigurasi yang hilang
+ * hanya mempengaruhi evaluator yang membutuhkannya.
  *
- * Provides runtime validation for ClassificationConfig with clear error messages.
- * No external validation library dependency — pure TypeScript guards.
+ * Tidak melakukan query database maupun mengubah rumus evaluator.
  */
 
-import type { ClassificationConfig, FlowheadConfig, VfdConfig, OutputMode, EquipmentIdentity } from "./models.ts";
+import { TroubleType } from "./models.ts";
 
-/** Validation result for config. */
-export interface ConfigValidationResult {
-  valid: boolean;
+import type {
+  ClassificationConfig,
+  FlowheadConfig,
+  VfdConfig,
+  OutputMode,
+  EquipmentIdentity,
+} from "./models.ts";
+
+// ============================================================
+// VALIDATION RESULT
+// ============================================================
+
+export interface FailureReadinessResult {
+  ready: boolean;
   errors: string[];
 }
 
-/** Validate flowhead configuration (FH group troubles). */
-export function validateFlowheadConfig(config: FlowheadConfig, prefix = "flowhead"): string[] {
+export interface ConfigValidationResult {
+  valid: boolean;
+  errors: string[];
+  failureReadiness: Record<TroubleType, FailureReadinessResult>;
+}
+
+// ============================================================
+// FAILURE REQUIREMENTS — FLOWHEAD
+// ============================================================
+
+const FLOWHEAD_REQUIREMENTS = {
+  pompa_tersangkut_sampah: [
+    "ptsFrequencyHz",
+    "ptsPowerRefKw",
+    "ptsCurrentRefA",
+    "ptsTorqueRefPct",
+    "ptsRpmRef",
+  ],
+
+  turbulensi: [
+    "frequencySetpointHz",
+    "turbulensiPowerRefKw",
+    "turbulensiTorqueRefPct",
+    "turbulensiCurrentDevThresholdA",
+    "turbulensiWindow",
+  ],
+
+  banyak_sampah: [
+    "frequencySetpointHz",
+    "banyakSampahPowerRefKw",
+    "banyakSampahCurrentRefA",
+    "banyakSampahTorqueRefPct",
+  ],
+
+  dry_run: [
+    "frequencySetpointHz",
+    "ptsPowerRefKw",
+    "ptsCurrentRefA",
+    "dryRunPowerFactor",
+    "dryRunCurrentFactor",
+    "dryRunTorqueThresholdPct",
+  ],
+
+} as const satisfies Partial<
+  Record<TroubleType, readonly (keyof FlowheadConfig)[]>
+>;
+
+// ============================================================
+// FAILURE REQUIREMENTS — VSD
+// ============================================================
+
+const VFD_REQUIREMENTS = {
+  unbalance: [
+    "unbalanceThresholdPct",
+  ],
+
+  undervoltage: [
+    "undervoltageThresholdV",
+  ],
+
+  overvoltage: [
+    "overvoltageThresholdV",
+  ],
+
+  panel_overheat: [
+    "panelOverheatThresholdC",
+  ],
+
+} as const satisfies Partial<
+  Record<TroubleType, readonly (keyof VfdConfig)[]>
+>;
+
+const TROUBLE_TYPES: readonly TroubleType[] =
+  Object.values(TroubleType);
+
+// ============================================================
+// FIELD REGISTRY
+// ============================================================
+
+const ALL_FLOWHEAD_FIELDS: readonly (keyof FlowheadConfig)[] = [
+  "powerRefKw",
+  "currentRefA",
+  "frequencySetpointHz",
+  "rpmSetpoint",
+  "torqueSetpointPct",
+
+  "ptsFrequencyHz",
+  "ptsPowerRefKw",
+  "ptsCurrentRefA",
+  "ptsTorqueRefPct",
+  "ptsRpmRef",
+
+  "turbulensiPowerRefKw",
+  "turbulensiTorqueRefPct",
+  "turbulensiCurrentDevThresholdA",
+  "turbulensiWindow",
+
+  "banyakSampahPowerRefKw",
+  "banyakSampahCurrentRefA",
+  "banyakSampahTorqueRefPct",
+
+  "dryRunPowerFactor",
+  "dryRunCurrentFactor",
+  "dryRunTorqueThresholdPct",
+];
+
+const ALL_VFD_FIELDS: readonly (keyof VfdConfig)[] = [
+  "unbalanceThresholdPct",
+  "undervoltageThresholdV",
+  "overvoltageThresholdV",
+  "panelOverheatThresholdC",
+];
+
+// ============================================================
+// NUMERIC VALIDATION
+// ============================================================
+
+function validateNumber(
+  field: string,
+  value: number | null | undefined,
+  prefix: string,
+  required: boolean,
+): string[] {
+
+  const label = `${prefix}.${field}`;
+
+  if (value == null) {
+    return required
+      ? [`${label}: required`]
+      : [];
+  }
+
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value <= 0
+  ) {
+    return [
+      `${label}: must be positive finite number, got ${value}`,
+    ];
+  }
+
+  // Moving Average window harus bilangan bulat.
+  if (
+    field === "turbulensiWindow" &&
+    !Number.isSafeInteger(value)
+  ) {
+    return [
+      `${label}: must be positive integer`,
+    ];
+  }
+
+  // Dry Run factor diterima sebagai rasio dari provider.
+  // 66.70% -> 0.667
+  // 64.00% -> 0.64
+
+  if (
+    (
+      field === "dryRunPowerFactor" ||
+      field === "dryRunCurrentFactor"
+    ) &&
+    value > 1
+  ) {
+    return [
+      `${label}: factor must be <= 1 after percentage conversion`,
+    ];
+  }
+
+  return [];
+}
+
+// ============================================================
+// VOLTAGE CROSS-VALIDATION
+// ============================================================
+
+function voltageOrderErrors(
+  config: VfdConfig,
+  prefix: string,
+): string[] {
+
+  const uv = config.undervoltageThresholdV;
+  const ov = config.overvoltageThresholdV;
+
+  if (
+    typeof uv === "number" &&
+    Number.isFinite(uv) &&
+    uv > 0 &&
+    typeof ov === "number" &&
+    Number.isFinite(ov) &&
+    ov > 0 &&
+    uv >= ov
+  ) {
+    return [
+      `${prefix}.undervoltageThresholdV (${uv}) must be < overvoltageThresholdV (${ov})`,
+    ];
+  }
+
+  return [];
+}
+
+// ============================================================
+// FAILURE-SPECIFIC VALIDATION
+// ============================================================
+
+export function validateFailureConfig(
+  config: ClassificationConfig,
+  failure: TroubleType,
+): FailureReadinessResult {
+
   const errors: string[] = [];
 
-  // Required for PTS
-  if (config.ptsFrequencyHz === null) errors.push(`${prefix}.ptsFrequencyHz: required`);
-  if (config.ptsPowerRefKw === null) errors.push(`${prefix}.ptsPowerRefKw: required`);
-  if (config.ptsCurrentRefA === null) errors.push(`${prefix}.ptsCurrentRefA: required`);
-  if (config.ptsTorqueRefPct === null) errors.push(`${prefix}.ptsTorqueRefPct: required`);
-  if (config.ptsRpmRef === null) errors.push(`${prefix}.ptsRpmRef: required`);
+  const flowFields = FLOWHEAD_REQUIREMENTS[
+    failure as keyof typeof FLOWHEAD_REQUIREMENTS
+  ] as readonly (keyof FlowheadConfig)[] | undefined;
 
-  // Required for Turbulensi
-  if (config.turbulensiPowerRefKw === null) errors.push(`${prefix}.turbulensiPowerRefKw: required`);
-  if (config.turbulensiTorqueRefPct === null) errors.push(`${prefix}.turbulensiTorqueRefPct: required`);
-  if (config.turbulensiCurrentDevThresholdA === null) errors.push(`${prefix}.turbulensiCurrentDevThresholdA: required`);
-  if (config.turbulensiWindow === null) errors.push(`${prefix}.turbulensiWindow: required`);
+  const vfdFields = VFD_REQUIREMENTS[
+    failure as keyof typeof VFD_REQUIREMENTS
+  ] as readonly (keyof VfdConfig)[] | undefined;
 
-  // Required for Banyak Sampah
-  if (config.banyakSampahPowerRefKw === null) errors.push(`${prefix}.banyakSampahPowerRefKw: required`);
-  if (config.banyakSampahCurrentRefA === null) errors.push(`${prefix}.banyakSampahCurrentRefA: required`);
-  if (config.banyakSampahTorqueRefPct === null) errors.push(`${prefix}.banyakSampahTorqueRefPct: required`);
+  // Flowhead dependency
+  for (const field of flowFields ?? []) {
+    errors.push(
+      ...validateNumber(
+        field,
+        config.flowhead[field],
+        "flowhead",
+        true,
+      ),
+    );
+  }
 
-  // Required for Dry Run
-  if (config.dryRunPowerFactor === null) errors.push(`${prefix}.dryRunPowerFactor: required`);
-  if (config.dryRunCurrentFactor === null) errors.push(`${prefix}.dryRunCurrentFactor: required`);
-  if (config.dryRunTorqueThresholdPct === null) errors.push(`${prefix}.dryRunTorqueThresholdPct: required`);
+  // VSD dependency
+  for (const field of vfdFields ?? []) {
+    errors.push(
+      ...validateNumber(
+        field,
+        config.vfd[field],
+        "vfd",
+        true,
+      ),
+    );
+  }
 
-  // Validate positive finite for numeric fields
-  const numericFields: (keyof FlowheadConfig)[] = [
-    "powerRefKw", "currentRefA", "frequencySetpointHz", "rpmSetpoint", "torqueSetpointPct",
-    "ptsFrequencyHz", "ptsPowerRefKw", "ptsCurrentRefA", "ptsTorqueRefPct", "ptsRpmRef",
-    "turbulensiPowerRefKw", "turbulensiTorqueRefPct", "turbulensiCurrentDevThresholdA", "turbulensiWindow",
-    "banyakSampahPowerRefKw", "banyakSampahCurrentRefA", "banyakSampahTorqueRefPct",
-    "dryRunPowerFactor", "dryRunCurrentFactor", "dryRunTorqueThresholdPct",
+  // Kedua ambang tegangan perlu konsisten.
+  if (
+    failure === "undervoltage" ||
+    failure === "overvoltage"
+  ) {
+    errors.push(
+      ...voltageOrderErrors(config.vfd, "vfd"),
+    );
+  }
+
+  // NORMAL tidak mempunyai threshold sendiri.
+  // Status akhirnya tetap diturunkan oleh engine.
+
+  return {
+    ready: errors.length === 0,
+    errors,
+  };
+}
+
+// ============================================================
+// FLOWHEAD AGGREGATE VALIDATION
+// ============================================================
+
+export function validateFlowheadConfig(
+  config: FlowheadConfig,
+  prefix = "flowhead",
+): string[] {
+
+  const required = new Set<keyof FlowheadConfig>(
+    Object.values(FLOWHEAD_REQUIREMENTS).flat() as (keyof FlowheadConfig)[],
+  );
+
+  return ALL_FLOWHEAD_FIELDS.flatMap((field) =>
+    validateNumber(
+      field,
+      config[field],
+      prefix,
+      required.has(field),
+    ),
+  );
+}
+
+// ============================================================
+// VSD AGGREGATE VALIDATION
+// ============================================================
+
+export function validateVfdConfig(
+  config: VfdConfig,
+  prefix = "vfd",
+): string[] {
+
+  const required = new Set<keyof VfdConfig>(
+    Object.values(VFD_REQUIREMENTS).flat() as (keyof VfdConfig)[],
+  );
+
+  return [
+    ...ALL_VFD_FIELDS.flatMap((field) =>
+      validateNumber(
+        field,
+        config[field],
+        prefix,
+        required.has(field),
+      ),
+    ),
+
+    ...voltageOrderErrors(config, prefix),
+  ];
+}
+
+// ============================================================
+// RUNTIME VALIDATION
+// ============================================================
+
+export function validateRuntimeConfig(
+  config: {
+    stagnationLimit: number;
+    outputMode: OutputMode;
+  },
+  prefix = "runtime",
+): string[] {
+
+  const errors: string[] = [];
+
+  if (
+    !Number.isSafeInteger(config.stagnationLimit) ||
+    config.stagnationLimit < 1
+  ) {
+    errors.push(
+      `${prefix}.stagnationLimit: must be positive integer`,
+    );
+  }
+
+  if (
+    config.outputMode !== "poc" &&
+    config.outputMode !== "production"
+  ) {
+    errors.push(
+      `${prefix}.outputMode: must be "poc" or "production"`,
+    );
+  }
+
+  return errors;
+}
+
+// ============================================================
+// CLASSIFICATION CONFIG VALIDATION
+// ============================================================
+
+export function validateClassificationConfig(
+  config: ClassificationConfig,
+): ConfigValidationResult {
+
+  const failureReadiness =
+    {} as Record<TroubleType, FailureReadinessResult>;
+
+  // Penilaian independen untuk setiap Failure.
+  for (const trouble of TROUBLE_TYPES) {
+    failureReadiness[trouble] =
+      validateFailureConfig(config, trouble);
+  }
+
+  // Tetap sediakan hasil validasi agregat untuk
+  // kompatibilitas dengan pemanggil sebelumnya.
+  const errors = [
+    ...validateFlowheadConfig(config.flowhead),
+    ...validateVfdConfig(config.vfd),
+    ...validateRuntimeConfig(config.runtime),
   ];
 
-  for (const key of numericFields) {
-    const value = config[key];
-    if (value !== null && (!Number.isFinite(value) || value <= 0)) {
-      errors.push(`${prefix}.${key}: must be positive finite number, got ${value}`);
-    }
-  }
-
-  return errors;
-}
-
-/** Validate VFD configuration (VFD group troubles). */
-export function validateVfdConfig(config: VfdConfig, prefix = "vfd"): string[] {
-  const errors: string[] = [];
-
-  if (config.unbalanceThresholdPct === null) errors.push(`${prefix}.unbalanceThresholdPct: required`);
-  if (config.undervoltageThresholdV === null) errors.push(`${prefix}.undervoltageThresholdV: required`);
-  if (config.overvoltageThresholdV === null) errors.push(`${prefix}.overvoltageThresholdV: required`);
-  if (config.panelOverheatThresholdC === null) errors.push(`${prefix}.panelOverheatThresholdC: required`);
-
-  const numericFields: (keyof VfdConfig)[] = [
-    "unbalanceThresholdPct", "undervoltageThresholdV", "overvoltageThresholdV", "panelOverheatThresholdC",
-  ];
-
-  for (const key of numericFields) {
-    const value = config[key];
-    if (value !== null && (!Number.isFinite(value) || value <= 0)) {
-      errors.push(`${prefix}.${key}: must be positive finite number, got ${value}`);
-    }
-  }
-
-  // Voltage thresholds should be ordered
-  if (config.undervoltageThresholdV !== null && config.overvoltageThresholdV !== null) {
-    if (config.undervoltageThresholdV >= config.overvoltageThresholdV) {
-      errors.push(`${prefix}.undervoltageThresholdV (${config.undervoltageThresholdV}) must be < overvoltageThresholdV (${config.overvoltageThresholdV})`);
-    }
-  }
-
-  return errors;
-}
-
-/** Validate runtime configuration. */
-export function validateRuntimeConfig(config: { stagnationLimit: number; outputMode: OutputMode }, prefix = "runtime"): string[] {
-  const errors: string[] = [];
-
-  if (!Number.isInteger(config.stagnationLimit) || config.stagnationLimit < 1) {
-    errors.push(`${prefix}.stagnationLimit: must be positive integer`);
-  }
-  if (config.outputMode !== "poc" && config.outputMode !== "production") {
-    errors.push(`${prefix}.outputMode: must be "poc" or "production"`);
-  }
-
-  return errors;
-}
-
-/** Validate complete classification config. */
-export function validateClassificationConfig(config: ClassificationConfig): ConfigValidationResult {
-  const errors: string[] = [];
-
-  errors.push(...validateFlowheadConfig(config.flowhead, "flowhead"));
-  errors.push(...validateVfdConfig(config.vfd, "vfd"));
-  errors.push(...validateRuntimeConfig(config.runtime, "runtime"));
-
-  return { valid: errors.length === 0, errors };
+  return {
+    valid: errors.length === 0,
+    errors,
+    failureReadiness,
+  };
 }
 
 /** Create default config for testing/fixtures (not for production). */
