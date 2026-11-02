@@ -18,16 +18,22 @@
     "test:golden": "node --test test/golden/",
     "test:differential": "node --test test/differential/",
     "test:socket": "node --test test/socket/",
-    "test:repositories": "node --test test/repositories/"
+    "test:repositories": "node --test test/repositories/",
+    "dev": "next dev --hostname 127.0.0.1 --port 3030"
   },
   "dependencies": {
     "decimal.js": "^10.4.3",
     "dotenv": "^18.0.8",
     "mysql2": "^3.11.0",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "socket.io": "^4.8.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "socket.io-client": "^4.8.4",
     "typescript": "^5.7.3"
   }

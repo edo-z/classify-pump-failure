@@ -32,11 +32,13 @@ import {
   query,
   queryInTransaction,
   withTransaction,
+  executeInTransaction,
 } from "../db/index.ts";
 
 import {
   ValidationError,
   NotFoundError,
+  ConflictError,
 } from "./errors.ts";
 
 
@@ -1370,5 +1372,628 @@ export async function updatePumpConfig(
 
   throw new ValidationError(
     "Legacy Pump Configuration update is disabled",
+  );
+}
+
+
+/**
+ * DEXMIN — Stage 7C.1
+ * Configuration CREATE / DELETE Service
+ *
+ * Uses existing:
+ * - FLOWHEAD_RULES
+ * - VSD_RULES
+ * - RUNTIME_RULES
+ * - validateCode()
+ * - validateNumericValue()
+ * - validatePositiveInteger()
+ * - selectRows()
+ * - withTransaction()
+ *
+ * Only registered codes may be created.
+ * Required parameters cannot be deleted.
+ */
+
+// ============================================================
+// TYPES
+// ============================================================
+
+export interface CreateConfigInput {
+  code: unknown;
+  name?: unknown;
+  failure_id?: unknown;
+  numeric_value: unknown;
+  unit: unknown;
+}
+
+export interface DeleteConfigResponse {
+  code: string;
+  deleted: true;
+  source: "flowhead" | "vfd" | "runtime";
+}
+
+// ============================================================
+// SHARED VALIDATION
+// ============================================================
+
+function validateCreateName(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.trim().length === 0 ||
+    value.trim().length > 128
+  ) {
+    throw new ValidationError(
+      "name: must contain 1 to 128 characters",
+    );
+  }
+
+  return value.trim();
+}
+
+function validateCreateUnit(
+  value: unknown,
+  expected: string,
+): string {
+  if (value !== expected) {
+    throw new ValidationError(
+      `unit: expected ${expected}`,
+    );
+  }
+
+  return expected;
+}
+
+function validateCreateValue(
+  value: unknown,
+  code: string,
+  rule: ParameterRule,
+): number {
+  const result = validateNumericValue(
+    value,
+    { ...rule, code },
+  );
+
+  if (!result.valid || result.parsedValue === null) {
+    throw new ValidationError(
+      result.error ?? "Invalid numeric_value",
+    );
+  }
+
+  return result.parsedValue;
+}
+
+function throwIfDuplicate(
+  error: unknown,
+  code: string,
+): never {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ER_DUP_ENTRY"
+  ) {
+    throw new ConflictError(
+      `Configuration ${code} already exists`,
+    );
+  }
+
+  throw error;
+}
+
+// ============================================================
+// FAILURE OWNERSHIP
+// ============================================================
+
+async function resolveCreateFailureId(
+  rule: ParameterRule,
+  requestedId: unknown,
+  connection: PoolConnection,
+): Promise<number | null> {
+  if (rule.failure === null) {
+    if (
+      requestedId !== undefined &&
+      requestedId !== null
+    ) {
+      throw new ValidationError(
+        "failure_id must be null for shared configuration",
+      );
+    }
+
+    return null;
+  }
+
+  const rows = await selectRows<{ id: number }>(
+    `
+      SELECT id
+      FROM failure_definitions
+      WHERE failure = ?
+      LIMIT 1
+    `,
+    [rule.failure],
+    connection,
+  );
+
+  if (rows.length !== 1) {
+    throw new ValidationError(
+      `Failure definition ${rule.failure} is unavailable`,
+    );
+  }
+
+  const expectedId = Number(rows[0]!.id);
+
+  if (
+    requestedId !== undefined &&
+    requestedId !== expectedId
+  ) {
+    throw new ValidationError(
+      `failure_id does not match ${rule.failure}`,
+    );
+  }
+
+  return expectedId;
+}
+
+// ============================================================
+// VSD VOLTAGE CONSISTENCY
+// ============================================================
+
+async function validateCreateVoltageOrder(
+  vsdTypeId: number,
+  code: string,
+  value: number,
+  connection: PoolConnection,
+): Promise<void> {
+  if (
+    code !== "undervoltage_threshold_v" &&
+    code !== "overvoltage_threshold_v"
+  ) {
+    return;
+  }
+
+  const otherCode =
+    code === "undervoltage_threshold_v"
+      ? "overvoltage_threshold_v"
+      : "undervoltage_threshold_v";
+
+  const rows = await selectRows<{
+    numeric_value: DbDecimal;
+  }>(
+    `
+      SELECT numeric_value
+      FROM vsd_config
+      WHERE vsd_type_id = ?
+        AND code = ?
+      FOR UPDATE
+    `,
+    [vsdTypeId, otherCode],
+    connection,
+  );
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const otherValue = Number(rows[0]!.numeric_value);
+
+  if (!Number.isFinite(otherValue)) {
+    throw new ValidationError(
+      "Existing voltage threshold is invalid",
+    );
+  }
+
+  const undervoltage =
+    code === "undervoltage_threshold_v"
+      ? value
+      : otherValue;
+
+  const overvoltage =
+    code === "overvoltage_threshold_v"
+      ? value
+      : otherValue;
+
+  if (undervoltage >= overvoltage) {
+    throw new ValidationError(
+      "Undervoltage threshold must be lower than overvoltage threshold",
+    );
+  }
+}
+
+// ============================================================
+// EQUIPMENT CREATE
+// ============================================================
+
+async function createEquipmentConfiguration(
+  scope: EquipmentScope,
+  equipmentId: number,
+  input: CreateConfigInput,
+  connection: PoolConnection,
+): Promise<UpdateConfigResponse> {
+  const rules =
+    scope === "flowhead"
+      ? FLOWHEAD_RULES
+      : VSD_RULES;
+
+  const { code, rule } = validateCode(
+    input.code,
+    rules,
+    scope,
+  );
+
+  const name = validateCreateName(input.name);
+  const unit = validateCreateUnit(input.unit, rule.unit);
+  const value = validateCreateValue(
+    input.numeric_value,
+    code,
+    rule,
+  );
+
+  const failureId = await resolveCreateFailureId(
+    rule,
+    input.failure_id,
+    connection,
+  );
+
+  if (scope === "vsd") {
+    await validateCreateVoltageOrder(
+      equipmentId,
+      code,
+      value,
+      connection,
+    );
+  }
+
+  const table =
+    scope === "flowhead"
+      ? "flowhead_config"
+      : "vsd_config";
+
+  const idColumn =
+    scope === "flowhead"
+      ? "flowhead_capacity"
+      : "vsd_type_id";
+
+  try {
+    await executeInTransaction(
+      connection,
+      `
+        INSERT INTO ${table}
+          (
+            ${idColumn},
+            code,
+            name,
+            failure_id,
+            numeric_value,
+            unit
+          )
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        equipmentId,
+        code,
+        name,
+        failureId,
+        value,
+        unit,
+      ],
+    );
+  } catch (error) {
+    throwIfDuplicate(error, code);
+  }
+
+  return {
+    code,
+    effective_value: value,
+    source: scope === "flowhead"
+      ? "flowhead"
+      : "vfd",
+  };
+}
+
+// ============================================================
+// EQUIPMENT DELETE
+// ============================================================
+
+async function deleteEquipmentConfiguration(
+  scope: EquipmentScope,
+  equipmentId: number,
+  requestedCode: string,
+  connection: PoolConnection,
+): Promise<DeleteConfigResponse> {
+  const rules =
+    scope === "flowhead"
+      ? FLOWHEAD_RULES
+      : VSD_RULES;
+
+  const { code, rule } = validateCode(
+    requestedCode,
+    rules,
+    scope,
+  );
+
+  const table =
+    scope === "flowhead"
+      ? "flowhead_config"
+      : "vsd_config";
+
+  const idColumn =
+    scope === "flowhead"
+      ? "flowhead_capacity"
+      : "vsd_type_id";
+
+  const rows = await selectRows<{ code: string }>(
+    `
+      SELECT code
+      FROM ${table}
+      WHERE ${idColumn} = ?
+        AND code = ?
+      FOR UPDATE
+    `,
+    [equipmentId, code],
+    connection,
+  );
+
+  if (rows.length === 0) {
+    throw new NotFoundError(
+      `Configuration ${code} not found`,
+    );
+  }
+
+  if (rule.required === true) {
+    throw new ConflictError(
+      `Configuration ${code} is required and cannot be deleted`,
+    );
+  }
+
+  const result = await executeInTransaction(
+    connection,
+    `
+      DELETE FROM ${table}
+      WHERE ${idColumn} = ?
+        AND code = ?
+    `,
+    [equipmentId, code],
+  );
+
+  if (result.affectedRows !== 1) {
+    throw new ConflictError(
+      `Configuration ${code} could not be deleted`,
+    );
+  }
+
+  return {
+    code,
+    deleted: true,
+    source: scope === "flowhead"
+      ? "flowhead"
+      : "vfd",
+  };
+}
+
+// ============================================================
+// FLOWHEAD CREATE / DELETE
+// ============================================================
+
+export async function createFlowheadConfig(
+  capacity: number,
+  input: CreateConfigInput,
+  conn?: PoolConnection,
+): Promise<UpdateConfigResponse> {
+  const id = validatePositiveInteger(
+    capacity,
+    "flowhead_capacity",
+  );
+
+  if (conn) {
+    return createEquipmentConfiguration(
+      "flowhead", id, input, conn,
+    );
+  }
+
+  return withTransaction(({ connection }) =>
+    createEquipmentConfiguration(
+      "flowhead", id, input, connection,
+    ),
+  );
+}
+
+export async function deleteFlowheadConfig(
+  capacity: number,
+  code: string,
+  conn?: PoolConnection,
+): Promise<DeleteConfigResponse> {
+  const id = validatePositiveInteger(
+    capacity,
+    "flowhead_capacity",
+  );
+
+  if (conn) {
+    return deleteEquipmentConfiguration(
+      "flowhead", id, code, conn,
+    );
+  }
+
+  return withTransaction(({ connection }) =>
+    deleteEquipmentConfiguration(
+      "flowhead", id, code, connection,
+    ),
+  );
+}
+
+// ============================================================
+// VSD CREATE / DELETE
+// ============================================================
+
+export async function createVfdConfig(
+  vsdTypeId: number,
+  input: CreateConfigInput,
+  conn?: PoolConnection,
+): Promise<UpdateConfigResponse> {
+  const id = validatePositiveInteger(
+    vsdTypeId,
+    "vsd_type_id",
+  );
+
+  if (conn) {
+    return createEquipmentConfiguration(
+      "vsd", id, input, conn,
+    );
+  }
+
+  return withTransaction(({ connection }) =>
+    createEquipmentConfiguration(
+      "vsd", id, input, connection,
+    ),
+  );
+}
+
+export async function deleteVfdConfig(
+  vsdTypeId: number,
+  code: string,
+  conn?: PoolConnection,
+): Promise<DeleteConfigResponse> {
+  const id = validatePositiveInteger(
+    vsdTypeId,
+    "vsd_type_id",
+  );
+
+  if (conn) {
+    return deleteEquipmentConfiguration(
+      "vsd", id, code, conn,
+    );
+  }
+
+  return withTransaction(({ connection }) =>
+    deleteEquipmentConfiguration(
+      "vsd", id, code, connection,
+    ),
+  );
+}
+
+// ============================================================
+// RUNTIME CREATE
+// ============================================================
+
+export async function createRuntimeConfig(
+  input: CreateConfigInput,
+  conn?: PoolConnection,
+): Promise<UpdateConfigResponse> {
+  const perform = async (
+    connection: PoolConnection,
+  ): Promise<UpdateConfigResponse> => {
+    const { code, rule } = validateCode(
+      input.code,
+      RUNTIME_RULES,
+      "runtime",
+    );
+
+    const unit = validateCreateUnit(
+      input.unit,
+      rule.unit,
+    );
+
+    const value = validateCreateValue(
+      input.numeric_value,
+      code,
+      rule,
+    );
+
+    try {
+      await executeInTransaction(
+        connection,
+        `
+          INSERT INTO runtime_config
+            (code, numeric_value, unit)
+          VALUES (?, ?, ?)
+        `,
+        [code, value, unit],
+      );
+    } catch (error) {
+      throwIfDuplicate(error, code);
+    }
+
+    return {
+      code,
+      effective_value: value,
+      source: "runtime",
+    };
+  };
+
+  if (conn) {
+    return perform(conn);
+  }
+
+  return withTransaction(({ connection }) =>
+    perform(connection),
+  );
+}
+
+// ============================================================
+// RUNTIME DELETE
+// ============================================================
+
+export async function deleteRuntimeConfig(
+  requestedCode: string,
+  conn?: PoolConnection,
+): Promise<DeleteConfigResponse> {
+  const perform = async (
+    connection: PoolConnection,
+  ): Promise<DeleteConfigResponse> => {
+    const { code, rule } = validateCode(
+      requestedCode,
+      RUNTIME_RULES,
+      "runtime",
+    );
+
+    const rows = await selectRows<{ code: string }>(
+      `
+        SELECT code
+        FROM runtime_config
+        WHERE code = ?
+        FOR UPDATE
+      `,
+      [code],
+      connection,
+    );
+
+    if (rows.length === 0) {
+      throw new NotFoundError(
+        `Runtime configuration ${code} not found`,
+      );
+    }
+
+    if (rule.required === true) {
+      throw new ConflictError(
+        `Runtime configuration ${code} is required and cannot be deleted`,
+      );
+    }
+
+    const result = await executeInTransaction(
+      connection,
+      `
+        DELETE FROM runtime_config
+        WHERE code = ?
+      `,
+      [code],
+    );
+
+    if (result.affectedRows !== 1) {
+      throw new ConflictError(
+        `Runtime configuration ${code} could not be deleted`,
+      );
+    }
+
+    return {
+      code,
+      deleted: true,
+      source: "runtime",
+    };
+  };
+
+  if (conn) {
+    return perform(conn);
+  }
+
+  return withTransaction(({ connection }) =>
+    perform(connection),
   );
 }
