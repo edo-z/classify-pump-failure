@@ -277,6 +277,7 @@ function isLocalDevelopmentWrite(
   const allowedHosts = new Set([
     "127.0.0.1:3030",
     "localhost:3030",
+    "https://classify.aldozeno.my.id/config"
   ]);
 
   if (!host || !allowedHosts.has(host)) {

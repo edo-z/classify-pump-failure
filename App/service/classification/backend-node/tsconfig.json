@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2023"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "types": [
@@ -35,7 +33,7 @@
     "test/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
-  ],
+, "src/app/config/page.tsx", "src/app/layout.tsx"  ],
   "exclude": [
     "node_modules"
   ]

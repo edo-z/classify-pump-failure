@@ -1,0 +1,426 @@
+
+.app {
+  min-height: 100vh;
+  background: #f4f6fa;
+  color: #17243a;
+  font-family: Inter, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+.header {
+  min-height: 76px;
+  padding: 16px max(24px, calc((100% - 1240px) / 2));
+  background: #101c32;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand strong {
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.brand small {
+  font-size: 11px;
+  color: #9fb0cc;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #356dff;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.mode {
+  font-size: 10px;
+  color: #cad6ec;
+  background: #24334c;
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-weight: 700;
+}
+
+.container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 30px 24px 60px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #8390a5;
+  font-size: 12px;
+}
+
+.nav a {
+  color: #5273af;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  text-decoration: underline;
+}
+
+.nav strong {
+  color: #394b66;
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin: 32px 0;
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #5878ae;
+  margin: 0 0 10px;
+}
+
+.heading h1 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 34px);
+  letter-spacing: -0.04em;
+}
+
+.heading p:last-child {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #7e8da3;
+  line-height: 1.6;
+}
+
+.refresh {
+  background: #fff;
+  border: 1px solid #d9e1ed;
+  border-radius: 9px;
+  padding: 11px 16px;
+  color: #263b5b;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.refresh:hover {
+  background: #edf3ff;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 285px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.sidebar,
+.content {
+  background: #fff;
+  border: 1px solid #e1e6ef;
+  border-radius: 14px;
+  box-shadow: 0 5px 24px rgba(19, 37, 73, 0.035);
+}
+
+.sidebar {
+  padding: 18px 12px;
+}
+
+.sidebarTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 16px;
+  font-size: 13px;
+}
+
+.sidebarTitle span {
+  padding: 5px 9px;
+  background: #edf2fa;
+  border-radius: 7px;
+  color: #58718e;
+  font-size: 11px;
+}
+
+.failureList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.failureButton,
+.failureActive {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 13px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.failureButton:hover {
+  background: #f4f7fc;
+}
+
+.failureActive {
+  background: #edf4ff;
+  border-color: #d4e2ff;
+}
+
+.failureButton strong,
+.failureActive strong {
+  font-size: 12px;
+  color: #253754;
+}
+
+.failureButton small,
+.failureActive small {
+  font-size: 10px;
+  color: #8997ab;
+  overflow-wrap: anywhere;
+}
+
+.content {
+  min-height: 450px;
+  padding: 28px;
+}
+
+.failureHeader {
+  padding-bottom: 22px;
+  border-bottom: 1px solid #e8edf5;
+}
+
+.failureHeader h2 {
+  font-size: 24px;
+  margin: 0 0 10px;
+  letter-spacing: -0.03em;
+}
+
+.failureHeader code {
+  font-size: 11px;
+  color: #6c7e98;
+}
+
+.context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #f7f9fd;
+  border: 1px solid #e6ebf4;
+  border-radius: 10px;
+  padding: 18px;
+  margin-top: 22px;
+}
+
+.context strong {
+  font-size: 13px;
+}
+
+.context p {
+  font-size: 11px;
+  color: #8592a5;
+  margin: 6px 0 0;
+}
+
+.context label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #52627c;
+}
+
+.context select {
+  min-width: 155px;
+  padding: 10px 12px;
+  border: 1px solid #d4ddea;
+  border-radius: 8px;
+  background: #fff;
+  color: #263b5b;
+  font: inherit;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 28px 0 14px;
+}
+
+.sectionTitle h3 {
+  font-size: 14px;
+  margin: 0;
+}
+
+.sectionTitle span {
+  color: #8a98ad;
+  font-size: 11px;
+}
+
+.tableScroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.table th {
+  padding: 13px;
+  background: #f5f7fb;
+  color: #6e7f99;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: 14px 13px;
+  border-top: 1px solid #edf0f5;
+  color: #334560;
+}
+
+.table code {
+  font-size: 11px;
+  color: #5473ab;
+  overflow-wrap: anywhere;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.empty {
+  color: #8996a8;
+  font-size: 12px;
+  padding: 20px 4px;
+}
+
+.info,
+.warning,
+.error {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.info {
+  background: #f1f5fa;
+  color: #536984;
+}
+
+.warning {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background: #fff9ec;
+  color: #896124;
+  border: 1px solid #efdfbb;
+}
+
+.warning code {
+  overflow-wrap: anywhere;
+}
+
+.warning p {
+  margin: 0;
+  font-size: 11px;
+}
+
+.error {
+  background: #fff5f4;
+  color: #a13e3b;
+  border: 1px solid #efceca;
+}
+
+.note {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #8794a7;
+  margin-top: 18px;
+}
+
+.refresh:focus-visible,
+.failureButton:focus-visible,
+.failureActive:focus-visible,
+.context select:focus-visible {
+  outline: 3px solid #80a7ff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .failureList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 14px 16px;
+  }
+
+  .container {
+    padding: 24px 14px;
+  }
+
+  .heading,
+  .context {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .failureList {
+    grid-template-columns: 1fr;
+  }
+
+  .content {
+    padding: 18px;
+  }
+}
