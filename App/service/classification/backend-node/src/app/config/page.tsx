@@ -2,586 +2,997 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "./config.module.css";
+import styles from "./dashboard.module.css";
+import ParameterCrudPanel from "./ParameterCrudPanel.js";
 
-// ============================================================
-// TYPES — MATCH EXISTING DEXMIN API
-// ============================================================
+type Failure = {
+  id: number;
+  failure: string;
+  name: string;
+};
 
-interface PumpRow {
+type Pump = {
   id: number;
   pumpId: string;
-  flowhead_capacity: string | number;
+  flowhead_capacity: number | string;
   vsd_type_id: number;
-}
+};
 
-interface ConfigEntry {
+type Parameter = {
   code: string;
   name?: string;
-  numeric_value: string | number;
-  unit: string;
-  source: string;
-  updated_at?: string;
-}
+  numeric_value: number | string;
+  unit?: string;
+  failure_id?: number | null;
+  failure_code?: string | null;
+};
 
-interface EffectiveConfiguration {
-  pump: PumpRow;
-  flowhead: ConfigEntry[];
-  vfd: ConfigEntry[];
-  runtime: ConfigEntry[];
-  missing: string[];
-}
-
-interface ApiResponse<T> {
+type ApiResult<T> = {
   ok: boolean;
   data?: T;
   error?: string;
+  capabilities?: {
+    failureCrud: boolean;
+  };
+};
+
+type Mode = "create" | "edit" | "delete" | null;
+type Scope = "flowhead" | "vsd" | null;
+
+const FLOWHEAD = new Set([
+  "pompa_tersangkut_sampah",
+  "turbulensi",
+  "banyak_sampah",
+  "dry_run",
+]);
+
+const VSD = new Set([
+  "unbalance",
+  "undervoltage",
+  "overvoltage",
+]);
+
+const CORE = new Set([
+  ...FLOWHEAD,
+  ...VSD,
+  "normal",
+  "panel_overheat",
+]);
+
+const PARAMETER_CODES: Record<string, string[]> = {
+  pompa_tersangkut_sampah: [
+    "pts_frequency_hz",
+    "pts_power_ref_kw",
+    "pts_current_ref_a",
+    "pts_torque_ref_pct",
+    "pts_rpm_ref",
+  ],
+
+  turbulensi: [
+    "turbulensi_power_ref_kw",
+    "turbulensi_torque_ref_pct",
+    "turbulensi_current_dev_threshold_a",
+  ],
+
+  banyak_sampah: [
+    "banyak_sampah_power_ref_kw",
+    "banyak_sampah_current_ref_a",
+    "banyak_sampah_torque_ref_pct",
+  ],
+
+  dry_run: [
+    "dry_run_power_factor",
+    "dry_run_current_factor",
+    "dry_run_torque_threshold_pct",
+  ],
+
+  unbalance: [
+    "unbalance_threshold_pct",
+  ],
+
+  undervoltage: [
+    "undervoltage_threshold_v",
+  ],
+
+  overvoltage: [
+    "overvoltage_threshold_v",
+  ],
+};
+
+const SHARED_FLOWHEAD_CODES = [
+  "power_ref_kw",
+  "current_ref_a",
+  "rpm_setpoint",
+  "torque_setpoint_pct",
+  "frequency_setpoint_hz",
+];
+
+const RUNTIME_CODES = [
+  "stagnation_limit",
+  "turbulensi_window",
+];
+
+function getScope(code: string): Scope {
+  if (FLOWHEAD.has(code)) return "flowhead";
+  if (VSD.has(code)) return "vsd";
+  return null;
 }
 
-// ============================================================
-// API CLIENT — READ ONLY
-// ============================================================
+function getStatus(code: string): string {
+  if (!CORE.has(code)) return "Evaluator Coming Soon";
+  if (code === "panel_overheat") return "Pending Review";
+  if (code === "normal") return "Normal / Built-in";
+  return "Evaluator bawaan";
+}
 
-async function fetchConfig<T>(
-  endpoint: string,
+async function apiGet<T>(
+  url: string,
   signal: AbortSignal,
-): Promise<T> {
-  const response = await fetch(endpoint, {
+): Promise<ApiResult<T>> {
+  const response = await fetch(url, {
     method: "GET",
     signal,
   });
 
-  const payload = (await response.json()) as ApiResponse<T>;
+  const result = (await response.json()) as ApiResult<T>;
 
   if (
     !response.ok ||
-    payload.ok !== true ||
-    payload.data === undefined
+    result.ok !== true ||
+    result.data === undefined
   ) {
     throw new Error(
-      payload.error ??
-        `API request failed: HTTP ${response.status}`,
+      result.error ?? `HTTP ${response.status}`,
     );
   }
 
-  return payload.data;
+  return result;
 }
 
-// ============================================================
-// DISPLAY HELPERS
-// ============================================================
+async function apiWrite<T>(
+  method: "POST" | "PATCH" | "DELETE",
+  body: Record<string, unknown>,
+): Promise<T> {
+  const response = await fetch(
+    "/api/config/failure-registry",
+    {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    },
+  );
 
-function formatCapacity(
-  value: string | number,
-): string {
-  const number = Number(value);
+  const result = (await response.json()) as ApiResult<T>;
 
-  return Number.isFinite(number)
-    ? new Intl.NumberFormat("id-ID").format(number)
-    : String(value);
+  if (
+    !response.ok ||
+    result.ok !== true ||
+    result.data === undefined
+  ) {
+    throw new Error(
+      result.error ?? `HTTP ${response.status}`,
+    );
+  }
+
+  return result.data;
 }
 
-function ErrorMessage({
-  message,
+function ParameterTable({
+  rows,
 }: {
-  message: string;
+  rows: Parameter[];
 }) {
+  if (rows.length === 0) {
+    return (
+      <p className={styles.muted}>
+        Tidak ada parameter untuk bagian ini.
+      </p>
+    );
+  }
+
   return (
-    <div className={styles.error} role="alert">
-      <strong>Gagal memuat data</strong>
-      <p>{message}</p>
+    <div className={styles.tableScroll}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Code</th>
+            <th>Nilai</th>
+            <th>Unit</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.code}>
+              <td>{row.name || row.code}</td>
+              <td><code>{row.code}</code></td>
+              <td><strong>{String(row.numeric_value)}</strong></td>
+              <td>{row.unit || "-"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-// ============================================================
-// PAGE
-// ============================================================
+export default function ClassificationDashboard() {
+  const [failures, setFailures] = useState<Failure[]>([]);
+  const [pumps, setPumps] = useState<Pump[]>([]);
+  const [runtime, setRuntime] = useState<Parameter[]>([]);
+  const [parameters, setParameters] = useState<Parameter[]>([]);
 
-export default function ConfigurationPage() {
-  const [pumps, setPumps] = useState<PumpRow[]>([]);
-  const [selectedPumpId, setSelectedPumpId] =
-    useState("");
+  const [selectedId, setSelectedId] =
+    useState<number | null>(null);
 
-  const [configuration, setConfiguration] =
-    useState<EffectiveConfiguration | null>(null);
+  const [capacity, setCapacity] = useState("");
+  const [vsdType, setVsdType] = useState("");
 
-  const [pumpsLoading, setPumpsLoading] =
-    useState(true);
-
-  const [configurationLoading, setConfigurationLoading] =
+  const [canWrite, setCanWrite] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [parameterLoading, setParameterLoading] =
     useState(false);
 
-  const [pumpsError, setPumpsError] =
-    useState("");
+  const [error, setError] = useState("");
+  const [parameterError, setParameterError] = useState("");
+  const [message, setMessage] = useState("");
+  const [reload, setReload] = useState(0);
 
-  const [configurationError, setConfigurationError] =
-    useState("");
-
-  const [reloadKey, setReloadKey] = useState(0);
+  const [mode, setMode] = useState<Mode>(null);
+  const [draftCode, setDraftCode] = useState("");
+  const [draftName, setDraftName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [showComingSoon, setShowComingSoon] =
+    useState(false);
 
   // ==========================================================
-  // LOAD PUMP LIST
+  // INITIAL DATA
   // ==========================================================
 
   useEffect(() => {
     const controller = new AbortController();
 
-    async function loadPumps() {
-      setPumpsLoading(true);
-      setPumpsError("");
+    async function load() {
+      setLoading(true);
+      setError("");
 
       try {
-        const result = await fetchConfig<PumpRow[]>(
-          "/api/config/pumps",
-          controller.signal,
-        );
+        const [registry, pumpData, runtimeData] =
+          await Promise.all([
+            apiGet<Failure[]>(
+              "/api/config/failure-registry",
+              controller.signal,
+            ),
+            apiGet<Pump[]>(
+              "/api/config/pumps",
+              controller.signal,
+            ),
+            apiGet<Parameter[]>(
+              "/api/config/runtime",
+              controller.signal,
+            ),
+          ]);
 
-        if (!Array.isArray(result)) {
-          throw new Error(
-            "Format data pompa tidak sesuai kontrak API",
-          );
+        const rows = registry.data;
+        const pumpRows = pumpData.data;
+        const runtimeRows = runtimeData.data;
+
+        if (
+          !Array.isArray(rows) ||
+          !Array.isArray(pumpRows) ||
+          !Array.isArray(runtimeRows)
+        ) {
+          throw new Error("Format respons API tidak valid");
         }
 
         if (controller.signal.aborted) return;
 
-        setPumps(result);
+        setFailures(rows);
+        setPumps(pumpRows);
+        setRuntime(runtimeRows);
 
-        setSelectedPumpId((current) => {
-          if (
-            result.some(
-              (pump) => pump.pumpId === current,
-            )
-          ) {
-            return current;
-          }
+        setCanWrite(
+          registry.capabilities?.failureCrud === true,
+        );
 
-          return result[0]?.pumpId ?? "";
-        });
-      } catch (error) {
+        setSelectedId((current) =>
+          rows.some((row) => row.id === current)
+            ? current
+            : rows[0]?.id ?? null,
+        );
+      } catch (cause) {
         if (controller.signal.aborted) return;
 
-        setPumps([]);
-        setSelectedPumpId("");
-
-        setPumpsError(
-          error instanceof Error
-            ? error.message
-            : "Gagal membaca daftar pompa",
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Gagal membaca konfigurasi",
         );
       } finally {
         if (!controller.signal.aborted) {
-          setPumpsLoading(false);
+          setLoading(false);
         }
       }
     }
 
-    void loadPumps();
+    void load();
 
     return () => controller.abort();
-  }, [reloadKey]);
+  }, [reload]);
+
+  const selected =
+    failures.find((row) => row.id === selectedId) ?? null;
+
+  const scope = getScope(selected?.failure ?? "");
+
+  const capacities = [
+    ...new Set(
+      pumps.map((pump) => String(pump.flowhead_capacity)),
+    ),
+  ].sort((a, b) => Number(a) - Number(b));
+
+  const vsdTypes = [
+    ...new Set(
+      pumps.map((pump) => String(pump.vsd_type_id)),
+    ),
+  ].sort((a, b) => Number(a) - Number(b));
+
+  const activeCapacity = capacities.includes(capacity)
+    ? capacity
+    : capacities[0] ?? "";
+
+  const activeVsdType = vsdTypes.includes(vsdType)
+    ? vsdType
+    : vsdTypes[0] ?? "";
+
+  const contextValues =
+    scope === "flowhead" ? capacities : vsdTypes;
+
+  const activeContext =
+    scope === "flowhead" ? activeCapacity : activeVsdType;
 
   // ==========================================================
-  // LOAD EFFECTIVE CONFIGURATION
+  // CLASSIFICATION PARAMETERS
   // ==========================================================
 
   useEffect(() => {
     const controller = new AbortController();
 
-    if (!selectedPumpId) {
-      setConfiguration(null);
-      setConfigurationLoading(false);
-      setConfigurationError("");
+    setParameters([]);
+    setParameterError("");
+
+    if (!scope || !activeContext) {
+      setParameterLoading(false);
       return () => controller.abort();
     }
 
-    async function loadConfiguration() {
-      setConfiguration(null);
-      setConfigurationLoading(true);
-      setConfigurationError("");
+    const url =
+      scope === "flowhead"
+        ? `/api/config/flowhead?capacity=${encodeURIComponent(activeCapacity)}`
+        : `/api/config/vsd?vsdTypeId=${encodeURIComponent(activeVsdType)}`;
+
+    async function loadParameters() {
+      setParameterLoading(true);
 
       try {
-        const endpoint =
-          "/api/config/effective?pumpId=" +
-          encodeURIComponent(selectedPumpId);
+        const result = await apiGet<Parameter[]>(
+          url,
+          controller.signal,
+        );
 
-        const result =
-          await fetchConfig<EffectiveConfiguration>(
-            endpoint,
-            controller.signal,
-          );
-
-        if (
-          !result ||
-          !result.pump ||
-          !Array.isArray(result.flowhead) ||
-          !Array.isArray(result.vfd) ||
-          !Array.isArray(result.runtime) ||
-          !Array.isArray(result.missing)
-        ) {
-          throw new Error(
-            "Format konfigurasi efektif tidak sesuai kontrak API",
-          );
+        if (!Array.isArray(result.data)) {
+          throw new Error("Format parameter tidak valid");
         }
 
+        if (!controller.signal.aborted) {
+          setParameters(result.data);
+        }
+      } catch (cause) {
         if (controller.signal.aborted) return;
 
-        setConfiguration(result);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-
-        setConfigurationError(
-          error instanceof Error
-            ? error.message
-            : "Gagal membaca konfigurasi efektif",
+        setParameterError(
+          cause instanceof Error
+            ? cause.message
+            : "Gagal memuat parameter",
         );
       } finally {
         if (!controller.signal.aborted) {
-          setConfigurationLoading(false);
+          setParameterLoading(false);
         }
       }
     }
 
-    void loadConfiguration();
+    void loadParameters();
 
     return () => controller.abort();
-  }, [selectedPumpId, reloadKey]);
+  }, [
+    selectedId,
+    scope,
+    activeContext,
+    activeCapacity,
+    activeVsdType,
+    reload,
+  ]);
+
+  const hasOwnership = parameters.some(
+    (row) =>
+      "failure_id" in row ||
+      "failure_code" in row,
+  );
+
+  const specific = selected && hasOwnership
+    ? parameters.filter(
+      (row) =>
+        row.failure_id === selected.id ||
+        row.failure_code === selected.failure,
+    )
+    : [];
+
+  const shared =
+    scope === "flowhead" && hasOwnership
+      ? parameters.filter(
+        (row) =>
+          row.failure_id == null &&
+          row.failure_code == null,
+      )
+      : [];
+
+  const customCount = failures.filter(
+    (row) => !CORE.has(row.failure),
+  ).length;
 
   // ==========================================================
-  // DERIVED VALUES
+  // FAILURE CRUD
   // ==========================================================
 
-  const selectedPump =
-    pumps.find(
-      (pump) => pump.pumpId === selectedPumpId,
-    ) ?? null;
+  function openDialog(nextMode: Exclude<Mode, null>) {
+    if (!canWrite) return;
 
-  const missing = configuration?.missing ?? [];
+    setMode(nextMode);
+    setFormError("");
 
-  const summary = [
-    {
-      label: "Flowhead",
-      count: configuration?.flowhead.length ?? 0,
-      description: "Parameter kapasitas pompa",
-      category: "FLOWHEAD",
-    },
-    {
-      label: "VSD",
-      count: configuration?.vfd.length ?? 0,
-      description: "Parameter tipe penggerak",
-      category: "VSD",
-    },
-    {
-      label: "Runtime",
-      count: configuration?.runtime.length ?? 0,
-      description: "Parameter operasional bersama",
-      category: "RUNTIME",
-    },
-  ];
+    setDraftCode(
+      nextMode === "create" ? "" : selected?.failure ?? "",
+    );
+
+    setDraftName(
+      nextMode === "create" ? "" : selected?.name ?? "",
+    );
+  }
+
+  async function submit() {
+    if (!canWrite || saving || !mode) return;
+
+    setSaving(true);
+    setFormError("");
+    setMessage("");
+
+    try {
+      if (mode === "create") {
+        const created = await apiWrite<Failure>("POST", {
+          failure: draftCode.trim(),
+          name: draftName.trim(),
+        });
+
+        setSelectedId(created.id);
+        setMessage(
+          `Failure ${created.failure} berhasil ditambahkan. Evaluator Coming Soon.`,
+        );
+      }
+
+      if (mode === "edit" && selected) {
+        await apiWrite<Failure>("PATCH", {
+          id: selected.id,
+          name: draftName.trim(),
+        });
+
+        setMessage("Nama Failure berhasil diperbarui.");
+      }
+
+      if (mode === "delete" && selected) {
+        await apiWrite<{ id: number }>("DELETE", {
+          id: selected.id,
+        });
+
+        setSelectedId(null);
+        setMessage("Failure berhasil dihapus.");
+      }
+
+      setMode(null);
+      setReload((value) => value + 1);
+    } catch (cause) {
+      setFormError(
+        cause instanceof Error
+          ? cause.message
+          : "Operasi gagal",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   // ==========================================================
-  // UI
+  // DASHBOARD
   // ==========================================================
 
   return (
     <div className={styles.app}>
-      <header className={styles.topbar}>
+      <header className={styles.header}>
         <div className={styles.brand}>
-          <div className={styles.brandMark}>D</div>
+          <div className={styles.logo}>D</div>
           <div>
-            <div className={styles.brandName}>DEXMIN</div>
-            <div className={styles.brandSubtitle}>
-              Configuration Management
-            </div>
+            <strong>DEXMIN</strong>
+            <small>Classification Management</small>
           </div>
         </div>
-
-        <span className={styles.readOnlyBadge}>
-          READ ONLY · 8A
+        <span className={styles.headerBadge}>
+          CONFIGURATION DASHBOARD
         </span>
       </header>
 
       <main className={styles.container}>
-        <div className={styles.pageHeading}>
+        <div className={styles.heading}>
           <div>
-            <div className={styles.eyebrow}>
-              CONFIGURATION / OVERVIEW
-            </div>
-
-            <h1>Konfigurasi Pompa</h1>
-
+            <p className={styles.eyebrow}>
+              CLASSIFICATION / CONFIGURATION
+            </p>
+            <h1>Failure Configuration</h1>
             <p>
-              Lihat konfigurasi efektif setiap pompa
-              berdasarkan kapasitas Flowhead, tipe VSD,
-              dan parameter Runtime.
+              Kelola Failure Registry dan lihat parameter
+              referensi Classification Engine.
             </p>
           </div>
 
           <button
             type="button"
-            className={styles.refreshButton}
-            onClick={() =>
-              setReloadKey((value) => value + 1)
-            }
+            className={styles.secondaryButton}
+            onClick={() => setReload((value) => value + 1)}
           >
-            Muat ulang data
+            Muat ulang
           </button>
         </div>
 
-        <div className={styles.workspace}>
-          {/* ===========================================
-              PUMP SELECTOR
-          =========================================== */}
+        <div className={styles.metrics}>
+          <div className={styles.metric}>
+            <strong>{failures.length}</strong>
+            <span>Failure Terdaftar</span>
+          </div>
+          <div className={styles.metric}>
+            <strong>{failures.length - customCount}</strong>
+            <span>Failure Bawaan</span>
+          </div>
+          <div className={styles.metric}>
+            <strong>{customCount}</strong>
+            <span>Evaluator Coming Soon</span>
+          </div>
+        </div>
 
-          <aside className={styles.sidebar}>
-            <div className={styles.sidebarHeading}>
-              <div>
-                <h2>Daftar Pompa</h2>
-                <p>Pilih perangkat</p>
-              </div>
+        <nav className={styles.navigation}>
+          <a href="/config">Dashboard</a>
+          <a href="/config/failures">Failure Browser</a>
+          <a href="/config/pumps">Pump Overview</a>
 
-              <span className={styles.countBadge}>
-                {pumps.length}
-              </span>
+          <button
+            type="button"
+            onClick={() => setShowComingSoon(true)}
+          >
+            Dynamic Rule Engine
+          </button>
+        </nav>
+
+        {showComingSoon && (
+          <div className={styles.notice} role="status">
+            <div>
+              <strong>
+                Dynamic Rule Engine — Coming Soon
+              </strong>
+              <p>
+                Pembuatan rumus dan evaluator melalui
+                dashboard belum tersedia. Failure baru
+                hanya didaftarkan pada registry dan tidak
+                otomatis dievaluasi oleh Classification Engine.
+              </p>
             </div>
 
-            {pumpsLoading && (
-              <p className={styles.muted} role="status">
-                Memuat daftar pompa...
+            <button
+              type="button"
+              onClick={() => setShowComingSoon(false)}
+            >
+              Tutup
+            </button>
+          </div>
+        )}
+
+        {!canWrite && !loading && (
+          <div className={styles.readOnly}>
+            Mode read-only. Penulisan Failure Registry
+            belum diaktifkan untuk akses ini.
+          </div>
+        )}
+
+        {error && (
+          <div className={styles.error} role="alert">
+            {error}
+          </div>
+        )}
+
+        {message && (
+          <div className={styles.success} role="status">
+            {message}
+          </div>
+        )}
+
+        <div className={styles.workspace}>
+          {/* FAILURE LIST */}
+
+          <aside className={styles.sidebar}>
+            <div className={styles.sidebarHeader}>
+              <div>
+                <strong>Failure Registry</strong>
+                <small>{failures.length} jenis</small>
+              </div>
+
+              <button
+                type="button"
+                className={styles.primaryButton}
+                disabled={!canWrite}
+                onClick={() => openDialog("create")}
+              >
+                + Tambah
+              </button>
+            </div>
+
+            {loading && (
+              <p className={styles.muted}>
+                Memuat Failure...
               </p>
             )}
 
-            {pumpsError && (
-              <ErrorMessage message={pumpsError} />
-            )}
-
-            {!pumpsLoading &&
-              !pumpsError &&
-              pumps.length === 0 && (
-                <p className={styles.muted}>
-                  Belum ada pompa terdaftar.
-                </p>
-              )}
-
-            <div className={styles.pumpList}>
-              {pumps.map((pump) => {
-                const active =
-                  pump.pumpId === selectedPumpId;
-
-                return (
-                  <button
-                    type="button"
-                    key={pump.pumpId}
-                    onClick={() =>
-                      setSelectedPumpId(pump.pumpId)
-                    }
-                    aria-pressed={active}
-                    className={[
-                      styles.pumpButton,
-                      active ? styles.pumpActive : "",
-                    ].join(" ")}
-                  >
-                    <span className={styles.pumpSymbol}>
-                      P
-                    </span>
-
-                    <span className={styles.pumpText}>
-                      <strong>
-                        Pump {pump.pumpId}
-                      </strong>
-                      <small>
-                        FH {formatCapacity(
-                          pump.flowhead_capacity,
-                        )}{" "}
-                        · VSD {pump.vsd_type_id}
-                      </small>
-                    </span>
-
-                    <span
-                      className={styles.selectionIndicator}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className={styles.sidebarFooter}>
-              <span className={styles.statusDot} />
-              Data bersumber dari MySQL DEXMIN
+            <div className={styles.failureList}>
+              {failures.map((failure) => (
+                <button
+                  type="button"
+                  key={failure.id}
+                  aria-pressed={
+                    selectedId === failure.id
+                  }
+                  className={
+                    selectedId === failure.id
+                      ? styles.activeFailure
+                      : styles.failureButton
+                  }
+                  onClick={() =>
+                    setSelectedId(failure.id)
+                  }
+                >
+                  <strong>{failure.name}</strong>
+                  <small>{failure.failure}</small>
+                </button>
+              ))}
             </div>
           </aside>
 
-          {/* ===========================================
-              CONFIGURATION OVERVIEW
-          =========================================== */}
+          {/* FAILURE DETAIL */}
 
-          <section
-            className={styles.content}
-            aria-live="polite"
-          >
-            {!selectedPump && !pumpsLoading && (
-              <div className={styles.placeholder}>
-                Pilih pompa untuk melihat konfigurasinya.
-              </div>
-            )}
-
-            {selectedPump && (
+          <section className={styles.detail}>
+            {!selected ? (
+              <p className={styles.muted}>
+                Pilih Failure untuk melihat detailnya.
+              </p>
+            ) : (
               <>
-                <div className={styles.pumpHeader}>
+                <div className={styles.detailHeader}>
                   <div>
-                    <div className={styles.eyebrow}>
-                      SELECTED EQUIPMENT
-                    </div>
-
-                    <h2>
-                      Pump {selectedPump.pumpId}
-                    </h2>
-
-                    <p>
-                      Ringkasan konfigurasi efektif
-                      perangkat terdaftar.
+                    <p className={styles.eyebrow}>
+                      FAILURE DEFINITION #{selected.id}
                     </p>
+                    <h2>{selected.name}</h2>
+                    <code>{selected.failure}</code>
                   </div>
 
-                  <span className={styles.equipmentBadge}>
-                    Pump ID: {selectedPump.pumpId}
-                  </span>
-                </div>
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      disabled={!canWrite}
+                      onClick={() => openDialog("edit")}
+                    >
+                      Edit Nama
+                    </button>
 
-                <div className={styles.equipmentGrid}>
-                  <div className={styles.equipmentField}>
-                    <span>FLOWHEAD CAPACITY</span>
-                    <strong>
-                      {formatCapacity(
-                        selectedPump.flowhead_capacity,
-                      )}
-                    </strong>
-                  </div>
-
-                  <div className={styles.equipmentField}>
-                    <span>VSD TYPE</span>
-                    <strong>
-                      {selectedPump.vsd_type_id}
-                    </strong>
-                  </div>
-
-                  <div className={styles.equipmentField}>
-                    <span>CONFIGURATION SOURCE</span>
-                    <strong>MySQL</strong>
+                    <button
+                      type="button"
+                      className={styles.deleteButton}
+                      disabled={
+                        !canWrite ||
+                        CORE.has(selected.failure)
+                      }
+                      onClick={() => openDialog("delete")}
+                    >
+                      Hapus
+                    </button>
                   </div>
                 </div>
 
-                {configurationLoading && (
-                  <div
-                    className={styles.loading}
-                    role="status"
-                  >
-                    Membaca konfigurasi efektif...
+                <div className={styles.infoGrid}>
+                  <div>
+                    <small>STATUS</small>
+                    <strong>
+                      {getStatus(selected.failure)}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <small>CONFIGURATION SCOPE</small>
+                    <strong>
+                      {scope === "flowhead"
+                        ? "Flowhead"
+                        : scope === "vsd"
+                          ? "VSD"
+                          : "Tidak tersedia"}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <small>ENGINE SUPPORT</small>
+                    <strong>
+                      {CORE.has(selected.failure)
+                        ? "Built-in / Review"
+                        : "Coming Soon"}
+                    </strong>
+                  </div>
+                </div>
+
+                {!CORE.has(selected.failure) && (
+                  <div className={styles.notice}>
+                    <div>
+                      <strong>
+                        Evaluator Coming Soon
+                      </strong>
+                      <p>
+                        Failure ini sudah terdaftar,
+                        tetapi belum memiliki rumus
+                        klasifikasi yang dapat dijalankan.
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {configurationError && (
-                  <ErrorMessage
-                    message={configurationError}
-                  />
+                {selected.failure === "panel_overheat" && (
+                  <div className={styles.notice}>
+                    <div>
+                      <strong>Pending Review</strong>
+                      <p>
+                        Threshold Panel Overheat
+                        belum ditetapkan.
+                      </p>
+                    </div>
+                  </div>
                 )}
 
-                {configuration &&
-                  !configurationLoading && (
-                    <>
-                      <div className={styles.sectionHeading}>
-                        <div>
-                          <h3>Parameter Overview</h3>
-                          <p>
-                            Jumlah parameter yang tersedia
-                            untuk pompa terpilih.
-                          </p>
-                        </div>
-                      </div>
+                {scope && (
+                  <>
+                    <h3>Parameter Klasifikasi</h3>
 
-                      <div className={styles.summaryGrid}>
-                        {summary.map((item) => (
-                          <div
-                            className={styles.summaryCard}
-                            key={item.category}
+                    <div className={styles.context}>
+                      <strong>
+                        {scope === "flowhead"
+                          ? "Kapasitas Flowhead"
+                          : "Tipe VSD"}
+                      </strong>
+
+                      <div className={styles.contextOptions}>
+                        {contextValues.map((value) => (
+                          <button
+                            type="button"
+                            key={value}
+                            className={
+                              activeContext === value
+                                ? styles.activeContext
+                                : styles.contextButton
+                            }
+                            onClick={() => {
+                              if (scope === "flowhead") {
+                                setCapacity(value);
+                              } else {
+                                setVsdType(value);
+                              }
+                            }}
                           >
-                            <div className={styles.cardCategory}>
-                              {item.category}
-                            </div>
-
-                            <div className={styles.cardValue}>
-                              {item.count}
-                            </div>
-
-                            <div className={styles.cardLabel}>
-                              {item.label}
-                            </div>
-
-                            <p>{item.description}</p>
-                          </div>
+                            {scope === "flowhead"
+                              ? `FH ${value}`
+                              : `VSD ${value}`}
+                          </button>
                         ))}
                       </div>
+                    </div>
 
-                      <section className={styles.readinessPanel}>
-                        <div className={styles.readinessHeading}>
-                          <div>
-                            <h3>Kelengkapan Konfigurasi</h3>
-                            <p>
-                              Berdasarkan daftar parameter
-                              missing dari API.
-                            </p>
-                          </div>
+                    {parameterLoading ? (
+                      <p className={styles.muted}>
+                        Memuat parameter...
+                      </p>
+                    ) : parameterError ? (
+                      <div className={styles.error}>
+                        {parameterError}
+                      </div>
+                    ) : !hasOwnership ? (
+                      <div className={styles.notice}>
+                        API belum menyertakan relasi
+                        failure_id / failure_code.
+                        Parameter tidak dapat dipetakan
+                        secara aman ke Failure ini.
+                      </div>
+                    ) : (
+                      <ParameterCrudPanel
+                        key={`failure:${selected.id}:${scope}:${activeContext}`}
+                        scope={scope}
+                        context={activeContext}
+                        failureId={selected.id}
+                        rows={specific}
+                        allowedCodes={
+                          PARAMETER_CODES[selected.failure] ?? []
+                        }
+                        canWrite={canWrite}
+                        onChanged={() =>
+                          setReload((value) => value + 1)
+                        }
+                      />
+                    )}
 
-                          <span
-                            className={
-                              missing.length > 0
-                                ? styles.warningBadge
-                                : styles.neutralBadge
+                    {scope === "flowhead" &&
+                      !parameterLoading &&
+                      !parameterError &&
+                      hasOwnership && (
+                        <>
+                          <h3>Shared Flowhead</h3>
+                          <ParameterCrudPanel
+                            key={`shared:${activeCapacity}`}
+                            scope="flowhead"
+                            context={activeCapacity}
+                            failureId={null}
+                            rows={shared}
+                            allowedCodes={SHARED_FLOWHEAD_CODES}
+                            canWrite={canWrite}
+                            onChanged={() =>
+                              setReload((value) => value + 1)
                             }
-                          >
-                            {missing.length} missing
-                          </span>
-                        </div>
+                          />
+                        </>
+                      )}
+                  </>
+                )}
 
-                        {missing.length > 0 ? (
-                          <div className={styles.missingList}>
-                            {missing.map((code) => (
-                              <div
-                                className={styles.missingItem}
-                                key={code}
-                              >
-                                <span className={styles.warningDot} />
-                                <code>{code}</code>
-                                <span>Belum tersedia</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className={styles.noMissing}>
-                            API tidak melaporkan parameter
-                            yang belum tersedia.
-                          </p>
-                        )}
+                <h3>Runtime Configuration</h3>
+                <ParameterCrudPanel
+                  key="runtime-global"
+                  scope="runtime"
+                  rows={runtime}
+                  allowedCodes={RUNTIME_CODES}
+                  canWrite={canWrite}
+                  onChanged={() =>
+                    setReload((value) => value + 1)
+                  }
+                />
 
-                        <p className={styles.readinessNote}>
-                          Kelengkapan parameter tidak
-                          otomatis menyatakan evaluator
-                          siap digunakan. Penilaian
-                          readiness per Failure dilakukan
-                          pada tahap berikutnya.
-                        </p>
-                      </section>
-                    </>
-                  )}
+                <p className={styles.muted}>
+                  Runtime merupakan konfigurasi global.
+                  Tidak semua parameternya digunakan
+                  oleh Failure yang sedang dipilih.
+                </p>
               </>
             )}
           </section>
         </div>
 
-        <footer className={styles.footer}>
-          DEXMIN · Configuration Management ·
-          Tahap 8A · Read-only
-        </footer>
+        {/* CREATE / UPDATE / DELETE DIALOG */}
+
+        {mode && (
+          <div className={styles.overlay}>
+            <section
+              className={styles.dialog}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="dialog-title"
+            >
+              <h2 id="dialog-title">
+                {mode === "create"
+                  ? "Tambah Failure"
+                  : mode === "edit"
+                    ? "Edit Failure"
+                    : "Hapus Failure"}
+              </h2>
+
+              {mode === "delete" ? (
+                <p>
+                  Yakin menghapus{" "}
+                  <strong>{selected?.name}</strong>?
+                  Failure yang masih digunakan tidak
+                  dapat dihapus.
+                </p>
+              ) : (
+                <>
+                  <label>
+                    Failure Code
+                    <input
+                      value={draftCode}
+                      disabled={mode !== "create" || saving}
+                      placeholder="bearing_overheat"
+                      onChange={(event) =>
+                        setDraftCode(
+                          (event.currentTarget as unknown as {
+                            value: string;
+                          }).value,
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Failure Name
+                    <input
+                      value={draftName}
+                      disabled={saving}
+                      placeholder="Bearing Overheat"
+                      onChange={(event) =>
+                        setDraftName(
+                          (event.currentTarget as unknown as {
+                            value: string;
+                          }).value,
+                        )
+                      }
+                    />
+                  </label>
+
+                  {mode === "create" && (
+                    <p className={styles.muted}>
+                      Failure baru belum mempunyai
+                      evaluator. Dynamic Rule Engine:
+                      Coming Soon.
+                    </p>
+                  )}
+                </>
+              )}
+
+              {formError && (
+                <div className={styles.error} role="alert">
+                  {formError}
+                </div>
+              )}
+
+              <div className={styles.dialogActions}>
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  disabled={saving}
+                  onClick={() => setMode(null)}
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    mode === "delete"
+                      ? styles.deleteButton
+                      : styles.primaryButton
+                  }
+                  disabled={saving}
+                  onClick={() => void submit()}
+                >
+                  {saving
+                    ? "Memproses..."
+                    : mode === "delete"
+                      ? "Ya, Hapus"
+                      : "Simpan"}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </main>
     </div>
   );

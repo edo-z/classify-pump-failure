@@ -1,0 +1,267 @@
+.panel {
+  width: 100%;
+}
+
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.heading strong {
+  font-size: 13px;
+  color: #263a58;
+}
+
+.heading p {
+  margin: 6px 0 0;
+  color: #8997ab;
+  font-size: 11px;
+}
+
+.addButton,
+.editButton,
+.deleteButton,
+.saveButton,
+.cancelButton {
+  padding: 9px 13px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.addButton,
+.saveButton {
+  background: #356dff;
+  color: white;
+}
+
+.editButton {
+  background: #eef4ff;
+  color: #315eaf;
+  border-color: #d7e4fb;
+}
+
+.deleteButton {
+  background: #fff0f0;
+  color: #af4444;
+  border-color: #ebcaca;
+}
+
+.cancelButton {
+  background: white;
+  color: #405775;
+  border-color: #d8e1ee;
+}
+
+.panel button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.table th {
+  background: #f5f7fb;
+  color: #6e7f99;
+  font-size: 10px;
+  padding: 13px;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 14px 13px;
+  border-top: 1px solid #edf0f5;
+  color: #334560;
+}
+
+.table td code {
+  font-size: 11px;
+  color: #5473ab;
+  overflow-wrap: anywhere;
+}
+
+.numeric {
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.empty {
+  padding: 20px;
+  background: #f7f9fc;
+  border-radius: 9px;
+  color: #8695aa;
+  font-size: 12px;
+}
+
+.missing {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #efdfbb;
+  border-radius: 9px;
+  background: #fffaf0;
+}
+
+.missing > strong {
+  font-size: 11px;
+  color: #91662d;
+}
+
+.missingCodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.missingCodes code {
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: #fff;
+  color: #8d682e;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.readOnly {
+  margin-top: 14px;
+  color: #8795aa;
+  font-size: 11px;
+}
+
+.success,
+.error,
+.warning {
+  padding: 13px;
+  border-radius: 8px;
+  margin: 14px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.success {
+  background: #edf8f0;
+  color: #347248;
+  border: 1px solid #c8e5cf;
+}
+
+.error {
+  background: #fff1f1;
+  color: #a23c3c;
+  border: 1px solid #edcaca;
+}
+
+.warning {
+  background: #fff8e9;
+  color: #8b6328;
+  border: 1px solid #efdfbb;
+}
+
+.warning p {
+  margin: 10px 0 0;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(12, 25, 47, 0.66);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.dialog {
+  width: min(100%, 480px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 14px;
+  padding: 26px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.dialog h2 {
+  margin: 0 0 22px;
+  font-size: 19px;
+  color: #1e304c;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 17px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #52627c;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #d7e0eb;
+  border-radius: 8px;
+  background: white;
+  color: #263b5b;
+  font: inherit;
+}
+
+.field input:disabled {
+  background: #f4f6fa;
+  color: #8796aa;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 24px;
+}
+
+.panel button:focus-visible,
+.panel input:focus-visible,
+.panel select:focus-visible {
+  outline: 3px solid #83a6ff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+  .heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dialog {
+    padding: 20px;
+  }
+}
