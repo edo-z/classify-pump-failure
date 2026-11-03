@@ -31,7 +31,8 @@ type DbDecimal = string | number;
 
 interface PumpRow {
   pumpId: string;
-  flowhead_capacity: DbDecimal | null;
+  flowhead_capacity: number | string | null;
+  frequency_setpoint_hz: string | number | null;
   vsd_type_id: number | null;
 }
 
@@ -443,7 +444,8 @@ async function loadPump(
     SELECT
       pumpId,
       flowhead_capacity,
-      vsd_type_id
+      vsd_type_id,
+      frequency_setpoint_hz
 
     FROM pumps
 
@@ -653,7 +655,6 @@ export class DbConfigurationProvider
       const flowhead = emptyFlowhead();
       const vfd = emptyVsd();
 
-
       // ======================================================
       // STEP 3 — LOAD RUNTIME CONFIGURATION
       // ======================================================
@@ -726,6 +727,10 @@ export class DbConfigurationProvider
         );
       }
 
+      flowhead.frequencySetpointHz =
+        parsePumpFrequencySetpoint(
+          pump.frequency_setpoint_hz,
+        );
 
       // ======================================================
       // STEP 6 — BUILD CLASSIFICATION CONFIG
@@ -811,4 +816,29 @@ export function createDbConfigurationProvider():
   DbConfigurationProvider {
 
   return new DbConfigurationProvider();
+}
+// ============================================================================
+// NUMERIC PARSING
+// ============================================================================
+
+function parsePumpFrequencySetpoint(
+  value: string | number | null,
+): number | null {
+
+  if (value === null) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  if (
+    !Number.isFinite(parsed) ||
+    parsed <= 0
+  ) {
+    throw new Error(
+      "Invalid pumps.frequency_setpoint_hz",
+    );
+  }
+
+  return parsed;
 }

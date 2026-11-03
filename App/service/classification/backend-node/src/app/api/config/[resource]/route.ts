@@ -33,6 +33,10 @@ import {
 } from "../../../../application/configManagement.ts";
 
 import {
+  getEffectiveConfigSynced,
+} from "../../../../application/effectiveConfigSynced.ts";
+
+import {
   ValidationError,
   NotFoundError,
   ConflictError,
@@ -232,7 +236,7 @@ export async function GET(
         );
 
         return success(
-          await getEffectiveConfig(pumpId),
+          await getEffectiveConfigSynced(pumpId),
         );
       }
 

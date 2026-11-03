@@ -59,6 +59,12 @@ const CORE = new Set([
   "panel_overheat",
 ]);
 
+const FREQUENCY_DEPENDENT_FAILURES = new Set([
+  "turbulensi",
+  "banyak_sampah",
+  "dry_run",
+]);
+
 const PARAMETER_CODES: Record<string, string[]> = {
   pompa_tersangkut_sampah: [
     "pts_frequency_hz",
@@ -104,7 +110,6 @@ const SHARED_FLOWHEAD_CODES = [
   "current_ref_a",
   "rpm_setpoint",
   "torque_setpoint_pct",
-  "frequency_setpoint_hz",
 ];
 
 const RUNTIME_CODES = [
@@ -844,6 +849,25 @@ export default function ClassificationDashboard() {
                     )}
 
                     {scope === "flowhead" &&
+                      selected &&
+                      FREQUENCY_DEPENDENT_FAILURES.has(selected.failure) && (
+                        <div className={styles.notice}>
+                          <div>
+                            <strong>Frequency Setpoint — Pump Configuration</strong>
+
+                            <p>
+                              Frequency setpoint merupakan konfigurasi
+                              masing-masing Pump ID, bukan konfigurasi
+                              bersama berdasarkan kapasitas Flowhead.
+
+                              Pengelolaannya akan dilakukan melalui
+                              Pump Configuration.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                    {scope === "flowhead" &&
                       !parameterLoading &&
                       !parameterError &&
                       hasOwnership && (
@@ -854,7 +878,9 @@ export default function ClassificationDashboard() {
                             scope="flowhead"
                             context={activeCapacity}
                             failureId={null}
-                            rows={shared}
+                            rows={shared.filter(
+                              (row) => row.code !== "frequency_setpoint_hz"
+                            )}
                             allowedCodes={SHARED_FLOWHEAD_CODES}
                             canWrite={canWrite}
                             onChanged={() =>

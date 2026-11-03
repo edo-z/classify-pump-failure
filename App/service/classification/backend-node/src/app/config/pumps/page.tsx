@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./config.module.css";
+import PumpSetpointEditor from "./PumpSetpointEditor.js";
 
 // ============================================================
 // TYPES — MATCH EXISTING DEXMIN API
@@ -60,7 +61,7 @@ async function fetchConfig<T>(
   ) {
     throw new Error(
       payload.error ??
-        `API request failed: HTTP ${response.status}`,
+      `API request failed: HTTP ${response.status}`,
     );
   }
 
@@ -457,6 +458,11 @@ export default function ConfigurationPage() {
                       )}
                     </strong>
                   </div>
+
+                  <PumpSetpointEditor
+                    key={selectedPump.pumpId}
+                    pumpId={selectedPump.pumpId}
+                  />
 
                   <div className={styles.equipmentField}>
                     <span>VSD TYPE</span>
