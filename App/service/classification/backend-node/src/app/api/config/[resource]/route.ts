@@ -33,6 +33,10 @@ import {
 } from "../../../../application/configManagement.ts";
 
 import {
+  canWriteConfiguration,
+} from "../../../../security/configWriteGuard.ts";
+
+import {
   getEffectiveConfigSynced,
 } from "../../../../application/effectiveConfigSynced.ts";
 
@@ -270,51 +274,8 @@ export async function GET(
 function isLocalDevelopmentWrite(
   request: Request,
 ): boolean {
-
-  // PATCH tidak boleh aktif di production.
-  if (process.env.NODE_ENV !== "development") {
-    return false;
-  }
-
-  const host = request.headers.get("host");
-
-  const allowedHosts = new Set([
-    "127.0.0.1:3030",
-    "localhost:3030",
-    "https://classify.aldozeno.my.id/config"
-  ]);
-
-  if (!host || !allowedHosts.has(host)) {
-    return false;
-  }
-
-  // Tolak Origin yang berbeda.
-  // curl biasanya tidak mengirimkan header Origin.
-  const origin = request.headers.get("origin");
-
-  if (
-    origin !== null &&
-    origin !== `http://${host}`
-  ) {
-    return false;
-  }
-
-  // Tolak request browser lintas origin.
-  const fetchSite = request.headers.get(
-    "sec-fetch-site",
-  );
-
-  if (
-    fetchSite !== null &&
-    fetchSite !== "same-origin" &&
-    fetchSite !== "none"
-  ) {
-    return false;
-  }
-
-  return true;
+  return canWriteConfiguration(request);
 }
-
 
 // ============================================================
 // PATCH — REQUEST BODY VALIDATION

@@ -1,6 +1,8 @@
 import type { RowDataPacket } from "mysql2";
 import { getPool } from "../../../../db/index.ts";
-
+import {
+  canWriteConfiguration,
+} from "../../../../security/configWriteGuard.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -48,7 +50,7 @@ function errorResponse(
 
 function canWrite(request: Request): boolean {
   if (process.env.NODE_ENV !== "development") {
-    return false;
+    return canWriteConfiguration(request);
   }
 
   if (

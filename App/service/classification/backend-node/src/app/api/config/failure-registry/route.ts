@@ -3,6 +3,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import type { PoolConnection } from "mysql2/promise";
 import { getPool } from "../../../../db/index.ts";
 import { NextResponse } from "next/dist/server/web/exports/index.js";
+import { canWriteConfiguration } from "../../../../security/configWriteGuard.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,11 +57,12 @@ function jsonResponse(
     },
   });
 }
-    
+
 // Pembatasan development lokal, BUKAN autentikasi.
 // Untuk saat ini domain publik tetap read-only.
 function canWrite(request: Request): boolean {
-  if (process.env.NODE_ENV !== "development") return false;
+  if (process.env.NODE_ENV !== "development") 
+  return canWriteConfiguration(request);
 
   if (
     process.env.DEXMIN_ENABLE_LOCAL_FAILURE_CRUD !== "1"
